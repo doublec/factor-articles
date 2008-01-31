@@ -1,0 +1,77 @@
+\chapter{Distributed Channels}\label{dchannels}
+
+Following on from my Channels implementation, I've now added 'Remote
+Channels'. These are distributed channels that allow you to access
+channels in separate Factor instances, even on different machines on
+the network. It's based on my Distributed Concurrency work.
+
+A channel can be made accessible by remote Factor nodes using the
+'publish' word. Given a channel this will return a long Id value that
+can be used by remote nodes to use the channel. For example:
+
+\begin{verbatim}
+<channel> [ sieve ] spawn drop publish .
+ => "ID12345678901234567890....."
+\end{verbatim}
+
+From a remote node you can create a <remote-channel> which contains
+ the hostname and port of the node containing the channel, and the Id
+ of that channel:
+
+\begin{verbatim}
+"foo.com" 9000 <node> "ID1234..." <remote-channel>
+\end{verbatim}
+
+You can use 'from' and 'to' on the remote channel exactly as you can
+ on normal channels. The data is marshalled over the network using the
+ serialization library.  Remote channels are implemented using
+ distributed concurrency so you must start a node on the Factor
+ instance you are using. This is done with 'start-node' giving the
+ hostname and port:
+
+\begin{verbatim}
+"foo.com" 9000 start-node
+\end{verbatim}
+
+Once this is done all published channels become available. Note that
+the hostname and port must be accessible by the remote machine so it
+can connect to send the data you request.
+
+As an experiment I published the prime number sieve example mentioned
+in my last post. It's running on one of my servers. To make it easy to
+create a <remote-channel> without needing to know the hostname and
+port I serialized the <remote-channel> instance, saved it in a file
+and made it available as [...server down sorry...].
+
+You can load this file into Factor, deserialize it and get the
+<remote-channel> instance. You can then call 'from' on it to get the
+next prime number in the series. Until they get so big that my Factor
+instance is DOS'd of course! The code to do this is:
+
+\begin{verbatim}
+USING: serialization http.client 
+       channels.remote concurrency.distributed ;
+
+"yourhostname-or-ip-address.com" 9000 start-server
+"[server-down-sorry]/prime.ser" http-get-stream 2nip 
+[ deserialize ] with-stream
+dup from .
+dup from .
+...etc...
+\end{verbatim}
+
+The '9000' can be any port number openly accessible on your machine. A
+current Factor bug means you may get an error in 'start-server' about
+an address already assigned if you run Linux. This is due to an
+interaction with ipv6 - you can ignore it, the server will start
+fine. 'start-server' needs to be run whenever you start our Factor
+instance.
+
+The 'dup from .' duplicates the <remote-channel>, gets the next number
+from it and prints it. It may not be in sequence as other users may
+have gotten the next number before you.
+
+There is a lot of room for improvement and additions to the code. Feel
+free to hack at it and send in patches. Let me know some ideas on how
+this could be used in 'real world' applications.  
+

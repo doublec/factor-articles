@@ -1,0 +1,116 @@
+\chapter{Web Applications}\label{webapps}
+
+There are a number of different ways of writing web applications in
+Factor but for this approach I'm using the furnace framework.
+
+The first step is to start the web server. This lives in the vocab \texttt{http.server}:
+\begin{verbatim}
+USE: http.server
+[ 8888 httpd ] in-thread
+\end{verbatim}
+
+This will start an instance of the server on port 8888 in another
+thread, to allow us to continue to enter commands in the listener.
+
+By default web applications are accessed on the URL path
+\texttt{/responder/name}, where \texttt{name} is the name of the web application.
+
+Accessing the web application path runs an 'action'. An action
+produces HTML output which gets sent back to the client browser. A web
+application has a default 'action' that gets run (the equivalent of an
+index.html), and can have other actions that are specified in the
+URL. Some examples:
+\begin{verbatim}
+http://localhost:8888/responder/foo
+    Runs the default action for the 'foo' web application
+http://localhost:8888/responder/foo/doit
+    Runs the 'doit' action
+http://localhost:8888/responder/foo/hello?name=chris
+    Runs the 'hello' action giving the argument 'name' with the value 'chris'
+\end{verbatim}
+
+The syntax for furnace URL's is therefore
+\texttt{http://servername:port/responder/[webappname]/[action]?[arguments]}
+
+Furnace web application must exist under the \texttt{webapps} vocabulary. So
+accessing \texttt{/responder/foo} will look for furnace details in the
+vocabulary \texttt{webapps.foo}.
+
+A furnace web application is registered with the http server using the
+\verb|web-app| word. It takes three arguments on the stack.
+
+\wordtable{
+\vocabulary{furnace}
+\ordinaryword{web-app}{web-app ( name default path -- )}
+}
+
+The \texttt{name} is the vocabulary name of the web application with
+out the \texttt{webapps} prefix. \texttt{default} is the name of the
+action that gets run when the web application URL is
+accessed. \texttt{path} is the location of any template files the web
+application uses.
+
+An action is a word that outputs data to be sent to the browser. It
+can be as simple as:
+\begin{verbatim}
+: doit ( -- ) serving-text "I am here" print ;
+\end{verbatim}
+
+The word must be registered as an action:
+
+\begin{verbatim}
+\ doit { } define-action
+\end{verbatim}
+
+Now accessing the URL for the web application with \texttt{doit} at
+the end of the path will result in 'I am here' being sent to the
+browser. Note the \texttt{serving-text} call. That outputs the headers
+for the mime type and the standard HTTP response. There is also a
+\texttt{serving-html}, or you could write the headers manually.
+
+Actions can take arguments. These are placed on the stack for the word
+that is called:
+\begin{verbatim}
+: hello ( name -- ) serving-text "Hello " write print ;
+\ hello { { "hello" } } define-action
+\end{verbatim}
+
+So the complete code for the simplest of web applications is:
+
+\begin{verbatim}
+USE: http.server
+[ 8888 httpd ] in-thread
+IN: webapps.test
+USE: furnace
+
+: index serving-text "We're alive!" print ;
+\ index { } define-action 
+
+: hello ( name -- ) serving-text "Hello " write print ;
+\ hello { { "name" } } define-action
+
+"test" "index" "." web-app
+\end{verbatim}
+
+Accessing \texttt{http://localhost:8888/responder/test} will run the 'index'
+action. This is what we passed as the 'default' parameter on the stack
+to the 'web-app' word. Accessing
+\texttt{http://localhost:8888/responder/test/hello?name=chris} will run the
+'hello' action.
+
+There is also the facility to have template files, very much like
+JSP. The 'path' parameter to \texttt{web-app} defines the location of
+these. Inside your action word you can call 'render-template' to run
+the template and have it sent to the browser:
+\begin{verbatim}
+: runme ( -- ) f "page" "Title" render-template ;
+\ runme { } define-action
+\end{verbatim}
+
+This will load the 'page.furnace' file in the path given to 'web-app'. It should contain standard HTML with embedded Factor code inside <% and %> tags. It will be run and sent to the client. The 'f' passed in this example can be an instance of a tuple (an object) and the template can access the slots of that instance to display data, etc.
+
+There is quite a bit more that can be done. There is a continuation
+based workflow system, validators for actions, etc. There is also much
+more that needs to be done. handling sessions, cookies, etc. Hopefully
+this post gives a quick introduction and allows you to get started.
+

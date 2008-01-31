@@ -1,0 +1,191 @@
+\chapter{Git Repository}\label{git}
+
+\section{How to publish a git repository}
+
+To set up a repository on a server you should clone the existing
+Factor repository using the '--bare' option:
+
+\begin{verbatim}
+git clone --bare http://www.factorcode.org/git/factor.git factor.git
+\end{verbatim}
+
+A bare repository is one without a checked out working copy of the
+code. It only contains the git database. As a general rule you should
+never push into a repository that contains changes in the working
+copy. To ensure this doesn't happen, we're making the server
+repository a bare repository - it has no working copy.
+
+Copy the 'factor.git' directory onto your server. I put it in
+'/git/factor.git'. Now if you have changes on your local machine that
+you want to push to your repository you can use something like:
+
+\begin{verbatim}
+git push yourname@yourserver.com:/git/factor.git
+\end{verbatim}
+
+If you want to push changes from a specific branch in your local
+repository:
+
+\begin{verbatim}
+git push yourname@yourserver.com:/git/factor.git mybranch:master
+\end{verbatim}
+
+To publish the remote repository you have two options. You can publish
+via the HTTP protocol, or via the git protocol. The first is slower
+but usable by people behind restrictive firewalls, while the second is
+more efficient but requires an open port. I suggest doing both.
+
+To publish via HTTP, you must make the file 'hooks/post-update'
+executable:
+
+\begin{verbatim}
+chmod +x /git/factor.git/hooks/post-update
+\end{verbatim}
+
+This gets executed whenever something is pushed to the repository. It
+runs a command 'git-update-server-info' which updates some files that
+makes the HTTP retrieval work. You should also run this once manually:
+
+\begin{verbatim}
+cd /git/factor.git
+git-update-server-info
+\end{verbatim}
+
+Now make the /git directory published via your webserver (I symbolic
+link to it in the server's doc-root). People can pull from the
+repository with:
+
+\begin{verbatim}
+git pull http://yourserver.com/git/factor.git
+\end{verbatim}
+
+To set up the git protocol you need to run the 'git-daemon'
+command. You pass it a directory which is the root of your git
+repositories. It will make public all git repositories underneath that
+root that have the file 'git-daemon-export-ok' in it. So first create
+this file:
+
+\begin{verbatim}
+touch /git/factor.git/git-daemon-export-ok
+\end{verbatim}
+
+Run the daemon with:
+
+\begin{verbatim}
+git-daemon --verbose /git
+\end{verbatim}
+
+The '--verbose' will give you output showing the results of connecting
+to it. I run this from within a screen session. You can set it up to
+automatically run using whatever features your server OS has. Now
+people can retrieve via the git protocol:
+
+\begin{verbatim}
+git pull git://yourserver.com/git/factor.git
+\end{verbatim}
+
+My repository is accessible from both protocols:
+
+\begin{verbatim}
+git clone http://www.double.co.nz/git/factor.git
+git clone git://double.co.nz/git/factor.git
+\end{verbatim}
+
+\section{Binary Files}
+
+Git has a heuristic for detecting binary files. You can force other
+file types to be binary by adding a .gitattributes file to your
+repository. This file contains a list of glob patterns, followed by
+attributes to be applied to files matching those patterns. By adding
+.gitattributes to the repository all cloned repositories will pick
+this up as well.
+
+For example, if you want all *.foo files to be treated as binary files
+you can have this line in .gitattributes:
+
+\begin{verbatim}
+*.foo -crlf -diff -merge
+\end{verbatim}
+
+This will mean all files with a .foo extension will not have carriage
+return/line feed translations done, won't be diffed and merges will
+result in conflicts leaving the original file untouched.
+
+Now when you pull from another repository that has changes to a .foo
+file you'll see something like:
+
+\begin{verbatim}
+ test.foo |  Bin 32 -> 36 bytes
+\end{verbatim}
+
+Note that it shows it is a binary file. If you pull from another
+repository with changes to test.foo you'll get:
+
+\begin{verbatim}
+Auto-merged test.foo
+CONFLICT (content): Merge conflict in test.foo
+\end{verbatim}
+
+The file will be untouched and you can change it manually to be the
+correct version. Either by leaving it untouched, or copying a new file
+over it. Then you need to commit the merge conflict fix (even if you
+left the file untouched):
+
+\begin{verbatim}
+git commit -a -m "Fix merge conflict in test.foo"
+\end{verbatim}
+
+\section{Cherry Picking}
+
+The cherry picking of patches works differently to Darcs. There are a
+couple of ways of handling this, but I use 'git cherry-pick'. If you
+have a number of contributers with their own repositories that you
+regularly pull from you can set up remote tracking branches:
+
+\begin{verbatim}
+git remote add john http://...
+git remote add mary http://...
+\end{verbatim}
+
+Now when you want John and Mary's most recent patches you can fetch
+them:
+
+\begin{verbatim}
+git fetch john
+git fetch mary
+\end{verbatim}
+
+This does not make any changes to your local branches. It gets and
+stores their changes in a separate remote tracking branch. If you want
+to see what John has changed, compared to yours:
+
+\begin{verbatim}
+git log -p master..john/master
+\end{verbatim}
+
+From there you can decide to pull in all John's commits:
+
+\begin{verbatim}
+git merge john/master
+\end{verbatim}
+
+If you want one commit, but not its dependencies then this is where
+'cherry-pick' is used.
+
+Given a commit id, 'cherry-pick' will take the patch for that commit
+and apply it to your current branch. It's used like:
+
+\begin{verbatim}
+git cherry-pick abcdefgh
+\end{verbatim}
+
+This creates a commit with a different commit id than the original,
+but with the same contents. It needs to be a different id as it
+doesn't have the same dependencies as the original.
+
+If you decide later you want all John's commits and do a merge which
+includes the commit that you cherry picked from you might expect
+conflicts. Git handles this case fine and does an automatic merge,
+noticing the patches are the same. So it effectively gives you the
+same functionality as Darcs selective patch pulling, but not as nice a
+user interface.

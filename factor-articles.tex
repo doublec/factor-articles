@@ -1,0 +1,103 @@
+% :indentSize=4:tabSize=4:noTabs=true:mode=tex:wrap=soft:
+
+\documentclass{book}
+
+\usepackage[plainpages=false,colorlinks]{hyperref}
+\usepackage[style=list,toc]{}
+\usepackage{alltt}
+\usepackage{times}
+\usepackage{tabularx}
+\usepackage{epsfig}
+\usepackage{amssymb}
+\usepackage{epstopdf}
+%\usepackage{fancyref}
+
+\pagestyle{headings}
+
+\setcounter{tocdepth}{3}
+\setcounter{secnumdepth}{3}
+
+\setlength\parskip{\medskipamount}
+\setlength\parindent{0pt}
+
+\newcommand{\bs}{\char'134}
+\newcommand{\dq}{\char'42}
+\newcommand{\tto}{\symbol{123}}
+\newcommand{\ttc}{\symbol{125}}
+\newcommand{\pound}{\char'43}
+\newcommand{\hhat}{\symbol{94}}
+
+\newcommand{\ttindex}[1]{\texttt{#1}\index{\texttt{#1}}}
+
+\newcommand{\vocabulary}[1]{\emph{Vocabulary:} \texttt{#1}&\\}
+
+\newcommand{\parsingword}[2]{\index{\texttt{#1}}\emph{Parsing word:} \texttt{#2}&\\}
+
+\newcommand{\ordinaryword}[2]{\index{\texttt{#1}}\emph{Word:} \texttt{#2}&\\}
+
+\newcommand{\symbolword}[1]{\index{\texttt{#1}}\emph{Symbol:} \texttt{#1}&\\}
+
+\newcommand{\classword}[1]{\index{\texttt{#1}}\emph{Class:} \texttt{#1}&\\}
+
+\newcommand{\genericword}[2]{\index{\texttt{#1}}\emph{Generic word:} \texttt{#2}&\\}
+
+\newcommand{\predword}[1]{\ordinaryword{#1}{#1~( object -- ?~)}}
+
+\setlength{\tabcolsep}{1mm}
+
+\newcommand{\wordtable}[1]{
+
+%HEVEA\renewcommand{\index}[1]{}
+%HEVEA\renewcommand{\glossary}[1]{}
+
+\begin{tabularx}{12cm}{lX}
+\hline
+#1
+\hline
+\end{tabularx}
+
+}
+
+\makeatletter
+
+\makeatother
+
+\makeglossary
+\makeindex
+
+\begin{document}
+
+\title{Factor Articles - Work in Progress}
+
+\author{Chris Double}
+
+\maketitle
+\tableofcontents{}
+
+\chapter*{Foreword}
+
+This set of articles is based on postings to my weblog which can be found at \verb|http://www.bluishcoder.co.nz|.
+
+
+The articles have been updated to run on the current version of Factor, 0.92. The Factor homepage can be found at \verb|http://www.factorcode.org|.
+
+\include{cells}
+\include{partialcontinuations}
+\include{distributedconcurrency}
+\include{patternmatching}
+\include{lazy}
+\include{parsers}
+\include{compilers}
+\include{channels}
+\include{distributed_channels}
+\include{webapps}
+\include{contresponder}
+\include{pegs}
+\include{fjsc}
+\include{git}
+\include{ogg}
+
+
+\input{factor-articles.ind}
+
+\end{document}

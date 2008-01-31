@@ -1,0 +1,129 @@
+\chapter{Distributed Concurrency}\label{distributedconcurrency}
+
+I've just added simple distributed message passing support to the
+concurrency library. Processes now belong to 'nodes'. These are
+individual Factor instances running on a machine. Messages can be sent
+between Factor nodes using the same foramt as sending from processes
+within a Factor instance.
+
+So far the support I've added is very basic and not at all optimized
+but it works. Messages can be any Factor type supported by the
+serialization library.
+
+I've extended the serialization library by added a serializer for
+local processes that serializes it as a 'remote-process'. This holds
+the node details (hostname and port) and the process identifier (known
+as the pid). This allows you to send a local process to a remote
+process, and that remote process can send a reply back to the local
+one by sending a message to the remote-process object it receives.
+
+A possible future extension to this might be to serialize proxies for
+other types. For example, sending a stream in a message can serialize
+it as a proxy stream so that writes to it from the remote system are
+sent back to the stream on the local system.
+
+The current state of the system is in my repository:
+
+\begin{verbatim}
+darcs get http://www.bluishcoder.co.nz/repos/factor
+\end{verbatim}
+
+
+The 'start-node' word is used to start up a TCP listener to handle
+requests from remote processes. This is required for distributed
+message passing to work. If you don't use 'start-node' only local
+message sends will be enabled. Here's a simple example that sends a
+message to a remote process, and it sends a reply back to the caller:
+
+\begin{verbatim}
+#! On Machine 1
+"concurrency" require
+USE: concurrency
+
+"machine1.com" 9000 start-node
+
+: process1 ( -- )
+  receive "Message Received!" reply process1 ;
+
+[ process1 ] spawn "process1" swap register-process
+\end{verbatim}
+
+
+This starts the node up with hostname 'machine1.com' on port 9000. A
+word called 'process1' is defined that blocks until it receives a
+message (either from another local process or a remote process) and
+replies to the message sender with the string "Message Received!". It
+then calls itself to restart the blocking on message receive.
+
+This word is spawned as a process and registered in that nodes global
+ register of named processes as 'process1'.
+
+\begin{verbatim}
+#! On Machine 2
+"concurrency" require
+USE: concurrency
+
+"machine2.com" 9000 start-node
+
+[ "machine1.com" 9000  "process1"  
+  "test-message" swap send-synchronous .
+] spawn
+\end{verbatim}
+
+
+This code, run in a Factor instance on Machine 2, starts a node with
+hostname 'machine2.com' on port 9000. It spawns a process which sends
+a message to the process named 'process1' on the node at hostname
+machine1.com, port 9000.
+
+This example sends a synchronous message. It is the equivalent of
+Termite Scheme's '!?' operator or Joe Armstrongs '!!' proposed Erlang
+extension - basically an RPC call. The message is sent to process one
+and blocks waiting for a reply to that specific message. On the reply
+it displays it (using '.') which results in 'Message Received!' being
+printed.
+
+Asynchronous sends work too. For example, a logger process on machine 1:
+
+\begin{verbatim}
+#! On Machine 1
+
+: logger ( -- )
+  receive print logger ;
+
+[ logger ] spawn "logger" swap register-process
+\end{verbatim}
+
+
+Messages can be sent to this process from any machine with:
+
+\begin{verbatim}
+#! On Machine 2
+
+[ "machine1.com" 9000  "logger"  
+  "Log Message!" swap send
+] spawn
+
+\end{verbatim}
+
+After this message send 'Log Message!' will be printed on machine 1.
+
+Messages can be sent to named processes, registered in the nodes
+global registry, as these examples show, or they can be sent to any
+process given the pid - a unique identifier for that process. They can
+also be sent to remote processes given a deserialized reference to the
+process object. You could store on a file system or web server
+deserialized references to important processes that clients can send
+messages to.
+
+I'm still working on the public API and making the performance
+better. Currently all message sends open and close the TCP socket to
+the remote server per message. There is also no security. The server
+connection for the node is accessable by anyone. Initially I may
+follow the Erlang 'magic cookie' approach to prevent unauthorised
+message sends but keen to look at better options.
+
+My motivation for working on this is to add to my in-progress web
+framework the ability to have the server side processes distributed
+across Factor instances or machines. This is one way to enable Factor
+to use multiple processors in a machine for example.

@@ -1,0 +1,156 @@
+\chapter{Lazy}\label{lazy}
+
+I originally wrote the Lazy Lists library in Factor to support the
+Parser Combinators library. It was one of my first libraries in Factor
+and was probably not very well written. Matthew Willis worked on it
+for the recent Factor releases to get it working with the removal of
+the standard list datatype and made it a lot better in places.
+
+Both the lazy lists and parser combinators worked by building up
+quotations manually to defer computation, and having these quotations
+called when required. This unfortunately made the library a bit
+difficult to debug and understand. While using the parser combinators
+library for a recent project I found it quite hard to work some things
+out and found a couple of bugs in the parser combinators - and areas
+where the lazy lists weren't lazy enough.
+
+To resolve the issues I rewrote the lazy lists library in a slightly
+different style and plan to redo the parser combinators in a similar
+manner. Instead of building up quotations I now use tuples to hold the
+information, with generic functions to call to process them.
+
+I created a generic function based protocol for lists. It has three
+generic functions:
+
+\begin{verbatim}
+GENERIC: car  ( cons -- car )
+GENERIC: cdr  ( cons -- cdr )
+GENERIC: nil? ( cons -- bool )
+\end{verbatim}
+
+
+A 'cons' tuple for normal non-lazy lists, with the obvious
+implementation was the starting point:
+
+\begin{verbatim}
+TUPLE: cons car cdr ;
+M: cons car ( cons -- car )
+    cons-car ;    
+
+M: cons cdr ( cons -- cdr )
+    cons-cdr ;    
+
+: nil ( -- cons )
+  T{ cons f f f } ;
+
+M: cons nil? ( cons -- bool )
+    nil eq? ;
+\end{verbatim}
+
+
+This gives the functionality of ordinary lists that used to exist in Factor. To make actual lazy lists I use the 'force' and <promise> words from Matthew's lazy list rewrite. A <promise> is a wrapper around a quotation that calls that quotation when 'force' is called on it, and memoizes the value to return directly on later 'force' calls. A lazy list has a promise for both the 'car' and 'cdr':
+
+\begin{verbatim}
+: lazy-cons ( car cdr -- promise ) 
+    >r <promise> r> <promise> <cons> 
+    T{ promise f f t f } clone [ set-promise-value ] keep ;
+
+M: promise car ( promise -- car )
+  force car force ;
+
+M: promise cdr ( promise -- cdr )
+  force cdr force ;
+
+M: promise nil? ( cons -- bool )
+  force nil? ;
+\end{verbatim}
+
+
+Notice that the lazy list itself is a promise. And the methods are
+specialized on the <promise> type. So not only are the 'car' and 'cdr'
+promises, but so is the list itself. The 'cdr' of a lazy list is a
+promise, which when forced, returns something that conforms to the
+list protocol. This means parts of the list can be lazy, and parts
+non-lazy
+
+A lazy map operation is the first word I implemented on top of this
+generic protocol. Previous implementations used quotations that were
+automatically generated and were quite complicated. In this new
+implementation I created a <lazy-map> tuple that implemented the list
+protocol which turned out to be much simpler:
+
+\begin{verbatim}
+TUPLE: lazy-map cons quot ;
+
+: lmap ( list quot -- result )
+    over nil? [ 2drop nil ] [ <lazy-map> ] if ;
+
+M: lazy-map car ( lazy-map -- car )
+  [ lazy-map-cons car ] keep
+  lazy-map-quot call ;
+
+M: lazy-map cdr ( lazy-map -- cdr )
+  [ lazy-map-cons cdr ] keep
+  lazy-map-quot lmap ;
+
+M: lazy-map nil? ( lazy-map -- bool )
+  lazy-map-cons nil? ;
+\end{verbatim}
+
+
+Basically the 'lmap' call itself just returns a <lazy-map> which contains the quotation and list to map over. Calls to 'car' will call the quotation on the head of the list, while 'car' returns a new <lazy-map> that holds the same quotation and the 'cdr' of the original list.
+
+The 'take' operation returns the first 'n' items in the list (whether
+lazy or not). It's lazy implementation is:
+
+\begin{verbatim}
+TUPLE: lazy-take n cons ;
+
+: ltake ( n list -- result )
+    over zero? [ 2drop nil ] [ <lazy-take> ] if ;
+     
+M: lazy-take car ( lazy-take -- car )
+  lazy-take-cons car ;
+
+M: lazy-take cdr ( lazy-take -- cdr )
+  [ lazy-take-n 1- ] keep
+  lazy-take-cons cdr ltake ;
+
+M: lazy-take nil? ( lazy-take -- bool )
+  lazy-take-n zero? ;
+\end{verbatim}
+
+
+Given a word 'naturals' to return an infinite list of natural numbers,
+ the squares of the first 10 numbers can be returned as:
+
+\begin{verbatim}
+naturals [ dup * ] lmap 10 swap ltake
+\end{verbatim}
+
+
+The result is a lazy list itself. No actual computation is done yet
+until 'car' or 'cdr' is called on the result.
+
+More code implements 'subset' to filter out items from the lists,
+append lazy lists in a lazy manner, etc. The squares of all odd
+natural numbers are expressed as:
+
+\begin{verbatim}
+naturals [ odd? ] lsubset [ dup * ] lmap
+\end{verbatim}
+
+
+It would be possible to add to this to implement the protocol for
+other things like lines in a file. This way you can lazily read
+through a large file line by line. Although this could be done in the
+previous lists code I think this approach makes things easier to
+read. As part of the refactoring I also wrote integrated Factor help
+for all the non-internal words.
+
+I'm not sure how 'concatenative' this approach is or whether it's the
+right approach for 'stack' based languages but it seems to work well
+for Factor. I'll work on the parser combinators, fitting them into a
+similar style, and see how it works out with the current project.
+
+

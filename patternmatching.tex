@@ -1,0 +1,114 @@
+\chapter{Pattern Matching}\label{patternmatching}
+
+For the concurrency library in Factor I've struggled to come up with
+good ways of writing the main loop of processes that handle
+messages. Erlang makes it so nice being able to create tuples and
+break them apart using pattern matching.
+
+I've gone from using Factor arrays and breaking them apart with
+'first', etc to using generic functions. The latter works well but
+ends up quite verbose for small servers. You need to create tuple
+types for the different messages - and handling tagged messages to
+reply to had to be done differently to other messages.
+
+To make this sort of thing easier I've written a 'match' word for
+Factor that does pattern matching. I based it on code from Paul
+Graham's excellent Common Lisp book, On Lisp.
+
+Given a Factor sequence or primitive type you can pattern match and
+create bindings to symbols with a special format. Any symbol that
+begins with a '?' character is used as a pattern match variable, and
+binds to the value in a matching sequence. Here's a simple example:
+
+\begin{verbatim}
+"match" require
+USE: match
+
+SYMBOL: ?a
+SYMBOL: ?b
+SYMBOL: ?c
+
+{ 1 2 3 } { ?a ?b ?c } match . 
+  => H{ { ?a 1 } { ?b 2 } { ?c 3 } }
+\end{verbatim}
+
+
+The two sequences match in that they are both sequences with three
+items. So the result is a hashtable containing the pattern match
+variables as keys and the values of those variables in the second
+sequence as the value. If items in the sequence are not pattern match
+variables then they must match exactly:
+
+\begin{verbatim}
+{ 1 2 3 } { 1 2 ?a } match .
+  => H{ { ?a 3 } }
+
+{ 1 2 3 } { 2 2 ?a } match .
+  => f
+\end{verbatim}
+
+
+The second example doesn't match as the first element in both
+sequences is not the vaue '2'.
+
+Matching works recursively too:
+
+\begin{verbatim}
+{ 1 2 { 3 4 } { 5 6 } } { 1 2 ?a { ?b ?c } } match .
+  => H{ { ?a { 3 4 } } { ?b 5 } { ?c 6 } }
+\end{verbatim}
+
+
+This type of pattern matching is very useful for deconstructing messages sent to distributed factor objects. But even more useful is to be able to have something like 'cond' but working directly with patterns. This is what 'match-cond' does. It takes a sequence and an array of arrays. Each sub-array contains the pattern to match the sequence against, and a quotation to execute if that pattern matched. The quotation is executed with the hashtable result of the pattern match bound in the current namespace scope, allowing easy retrieval of the pattern match variables.
+
+It sounds complex but is actually very easy in practice. Here what an
+example 'counter' process might look like using 'match-cond':
+
+\begin{verbatim}
+SYMBOL: ?value
+SYMBOL: ?from
+SYMBOL: ?tag
+
+: counter ( value -- )
+  receive {
+    { { increment ?value } [ ?value get + counter ] }
+    { { decrement ?value } [ ?value get - counter ] }
+    { { get ?from }        [ dup ?from get send counter ] }
+    { _                    [ "Unmatched message" print counter ] }
+  } match-cond ;
+
+\end{verbatim}
+
+This is a process that keeps track of a count value. You can send messages to increment or decrement the count by an amount, or to get the value and send it back to the calling process. So sends/receives look like:
+
+\begin{verbatim}
+[ 0 counter ] spawn
+{ increment 5 } over send
+{ decrement 10 } over send
+[ get , self , ] { } make swap send receive .
+  => -5
+\end{verbatim}
+
+
+This works out to be quite readable and much nicer than my previous attempts. The match and match-cond code is still a work in progress. I plan to add the ability to pattern match on tuples, all the factor sequence types, and to repeat pattern match variables to ensure the same repitition occurs in the target sequence. For example:
+
+\begin{verbatim}
+T{ person f "chris" "double" } T{ person f ?first ?last } match .
+  => H{ { ?first "chris" } { ?last "double" } }
+
+{ "one" "two" "one" "two" } { ?a ?b ?a ?b } match .
+  => H{ { ?a "one" } { ?b "two" } }
+
+{ "1" "two" "one" "two" } { ?a ?b ?a ?b } match .
+  => f
+\end{verbatim}
+
+
+The match library is split out from concurrency since it's likely to
+be quite usable for other things in Factor. It's available from my
+repository (and is likely to be available shortly from the main Factor
+repository). To get the patches from my repository:
+
+\begin{verbatim}
+darcs get http://www.bluishcoder.co.nz/repos/factor
+\end{verbatim}

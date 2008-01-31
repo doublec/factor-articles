@@ -1,0 +1,379 @@
+\chapter{Compilers and Interpreters}\label{compilers}
+
+Writing compilers and interpreters in Factor is quite easy. By writing
+the grammar using parser combinators, and having those combinators
+produce an abstract syntax tree (AST), it's easy to write a simple
+compiler or interpreter for the tree. I've already covered writing
+simple parser combinators so I'll concentrate on processing the AST
+for a simple language in this post. A later post might generate a
+parser for it or it could be an 'exercise for the reader'.
+
+For an example to start with I took the evaluator defined in this
+Lambda the Ultimate posting and converted it to Factor. For the
+interpreter I tried two different approaches to compare them. The
+first was to use pattern matching. For the second I use generic
+functions and Factor's OO system.
+
+For the compiler I show how to compile to Factor code, which can then
+be interpreted or compiled by Factor itself, and I also compile to
+Javascript. This javascript can be run in a standalone Javascript
+interpreter like Rhino, or in a web browser.
+
+To more easily re-use the AST across the two examples I added the
+ability to pattern match on tuples to the 'match' contrib
+library. This can be obtained from the standard Factor darcs
+repository:
+\begin{verbatim}
+darcs get http://www.factorcode.org/repos
+\end{verbatim}
+
+
+The factor 'latest' boot images can be used to bootstrap from this
+repository. The instructions on how to do this are on
+factorcode.org. For an Intel x86 linux machine the steps would be:
+
+\begin{verbatim}
+darcs get http://www.factorcode.org/repos
+cd factor/Factor
+make linux-x86
+wget http://www.factorcode.org/images/latest/boot.image.x86
+./f boot.image.x86
+\end{verbatim}
+
+The examples here should also work with the released Factor 0.85 as
+long as you replace 'contrib/match/match.factor' with the version from
+my repository. To load the 'match' library in Factor use:
+
+\begin{verbatim}
+"contrib/match" require
+USE: match
+\end{verbatim}
+
+In the Factor code snippets below I use '=>' to show the result of
+running Factor words. You shouldn't actually type that. Instead the
+result will be shown on the Factor stack or you can use '.' to print
+it.
+
+The code for the examples in this post can be downloaded from
+interpreter.factor. If you copy it into the 'contrib' directory of
+your Factor installation you can load it with:
+
+
+\begin{verbatim}
+"contrib/interpreter" require
+\end{verbatim}
+
+The evaluator that is being implemented has the following description
+ from the Lambda the Ultimate posting:
+
+\begin{verbatim}
+data Term a where
+    Lit  :: Int -> Term Int
+    Inc  :: Term Int -> Term Int
+    IsZ  :: Term Int -> Term Bool
+    If   :: Term Bool -> Term a -> Term a -> Term a
+    Pair :: Term a -> Term b -> Term (a,b)
+    Fst  :: Term (a,b) -> Term a
+    Snd  :: Term (a,b) -> Term b 
+  
+eval :: Term a -> a
+eval (Lit i)    = i
+eval (Inc t)    = eval t + 1
+eval (IsZ t)    = eval t == 0
+eval (If b t e) = if eval b then eval t else eval e
+eval (Pair a b) = (eval a, eval b)
+eval (Fst t)    = fst (eval t)
+eval (Snd t)    = snd (eval t)
+\end{verbatim}
+
+Basically we have literal values, which in this example are
+ integers. These can be incremented and tested to see if they are
+ zero. A 'pair' can be created and the first and second elements
+ obtained from the pair. An 'if' expression is available for testing
+ an expression and evaluating a true or false clause. These are
+ represented using Factor tuples:
+
+\begin{verbatim}
+TUPLE: lit i ;
+TUPLE: inc t ;
+TUPLE: isz t ;
+TUPLE: iff b t e ;
+TUPLE: pair a b ;
+TUPLE: fst t ;
+TUPLE: snd t ;
+\end{verbatim}
+
+I used the same names for the types and elements as the example but
+changed 'if' to 'iff' to prevent clashing with Factor's standard 'if'
+word. An example tree can be created that is the increment of the
+number 5 with:
+
+\begin{verbatim}
+5 <lit> <inc>
+\end{verbatim}
+
+When evaluated this should produce the result '6'.
+
+The interpreter implementation that uses pattern matching uses
+'match-cond'. This requires match variables to be set up which can be
+used to destructure sequences and tuples. For example:
+
+\begin{verbatim}
+5 <lit> T{ lit f ?t } match [ ?t ] bind => 5
+\end{verbatim}
+
+'T{ lit f 123 }' is the Factor syntax for a tuple. It creates a tuple
+at parse time and the actual object is stored in the word. This is
+different from '123 <lit>' which will produce the literal object at
+runtime. '?t' is a matching variable and the 'match' and 'match-cond'
+words use these to destructure matching elements of tuples and
+sequences. The match variable can then be used to get the actual value
+obtained. For more on the Factor pattern matching system you can read
+the documentation from within Factor with:
+
+\begin{verbatim}
+\ match help
+\end{verbatim}
+
+The Factor implementation of the interpreter using pattern matching
+is:
+
+\begin{verbatim}
+: eval1 ( a -- a )
+  {
+    { T{ lit  f ?i }       [ ?i ] }
+    { T{ inc  f ?t }       [ ?t eval1 1+ ] }
+    { T{ isz  f ?t }       [ ?t eval1 zero? ] }
+    { T{ iff  f ?b ?t ?e } [ ?b eval1 [ ?t ] [ ?e ] if eval1 ] }
+    { T{ pair f ?a ?b }    [ ?a eval1 ?b eval1 2array ] }
+    { T{ fst  f ?t }       [ ?t eval1 first ] }
+    { T{ snd  f ?t }       [ ?t eval1 second ] }
+  } match-cond ; 
+\end{verbatim}
+
+It is pretty much a direct translation of the Haskell example. An
+example of using it:
+
+\begin{verbatim}
+5 <lit> <inc> eval1 => 6
+\end{verbatim}
+
+The Lambda the Ultimate post gave a usage example:
+
+\begin{verbatim}
+stuff = Pair (If (IsZ (Inc (Inc (Lit 5))))
+                 (Lit 6)
+                 (Lit 7))
+             (Fst (Snd (Pair (Lit 42)
+                             (Pair (Lit 8) (Lit 9)))))
+\end{verbatim}
+
+
+Translated to Factor it is:
+
+\begin{verbatim}
+: driver ( -- v )
+  5 <lit> <inc> <inc> <isz> 
+    6 <lit>
+    7 <lit>
+  <iff> 
+  42 <lit> 8 <lit> 9 <lit> <pair> <pair> <snd> <fst> <pair> ;
+\end{verbatim}
+
+Running the 'eval1' word on this produces the answer, { 7 8 }:
+
+\begin{verbatim}
+driver eval1 => { 7 8 }
+\end{verbatim}
+
+Although 'eval1' is quite short and easy to understand it has a
+disadvantage in that to extend it with new AST types you need to
+modify the 'eval1' word. Using the Factor OO generic word system you
+extend the interpreter without having to modify existing code. Here's
+a generic word approach to the interpreter:
+
+\begin{verbatim}
+GENERIC: eval2 ( a -- a )
+
+M: lit  eval2 ( a -- a ) lit-i ;
+M: inc  eval2 ( a -- a ) inc-t eval2 1+ ;
+M: isz  eval2 ( a -- a ) isz-t eval2 zero? ;
+M: iff  eval2 ( a -- a ) dup iff-b eval2 [ iff-t ] [ iff-e ] if eval2 ;
+M: pair eval2 ( a -- a ) dup pair-a eval2 swap pair-b eval2 2array ;
+M: fst  eval2 ( a -- a ) fst-t eval2 first ;
+M: snd  eval2 ( a -- a ) snd-t eval2 second ;
+\end{verbatim}
+
+The 'M:' word is used to define a method for a generic word. This is
+similar to how generic functions and methods work in CLOS and
+Dylan. When a generic word is called the actual method invoked is
+based on the topmost item of the stack. The first symbol past the 'M:'
+is the type of that object that that method is for. The second is the
+name of the generic word the method will be added too. The rest of the
+definitions should be reasonably clear - they break apart the tuples
+and return results or call 'eval2' recursively. 'eval2' produces the
+same result as 'eval1':
+
+\begin{verbatim}
+driver eval2 => { 7 8 }
+\end{verbatim}
+
+Which approach to use is really personal preference. Of the two,
+'eval2' is the most efficient. This is because methods can be compiled
+in Factor whereas the current implementation of 'match-cond' cannot
+be. So 'eval1' will run in the Factor interpreter whereas 'eval2' will
+be compiled to native code. This can be seen by trying to compile the
+examples and running a timed test:
+
+\begin{verbatim}
+\ eval1 compile => "The word eval1 does not have a stack effect"
+\ eval2 compile 
+\ eval1 compiled? => f
+\ eval2 compiled? => t
+[ 1000 [ driver eval1 ] times ] time => 487ms run / 5 ms GC time
+[ 1000 [ driver eval2 ] times ] time => 3ms run / 0 ms GC time
+\end{verbatim}
+
+There is obviously room for improvement in the 'match' routines! I can
+say that because I wrote them :)
+
+A compiler follows the same structure as the interpreter but instead
+of computing the result we generate code. This code is then later fed
+to the compiler. For the compiler examples I'm only going to show the
+pattern matching based example. The generic word implementation is
+very similar and would follow the relevant interpreter implementation.
+
+Factor provides a 'make' word that can be used for dynamically appending to a new sequence. From within a 'make' scope you can use ',' to append an element and '%' to splice in a sequence to the constructed sequence. 'make' can be used for constructing arrays, strings, quotations, etc. The type of the constructed sequence is identified by an exemplar sequence passed to 'make'. For example:
+
+\begin{verbatim}
+[ 1 , 2 , { 3 4 } % { 5 } , ] { } make => { 1 2 3 4 { 5 } }
+\end{verbatim}
+
+The top level 'compile' word will set up a 'make' scope for the AST
+compile routines to append to. Here's the compiler to Factor:
+
+\begin{verbatim}
+: (compile1) ( a -- )
+  {
+    { T{ lit  f ?i }       [ ?i , ] }
+    { T{ inc  f ?t }       [ ?t (compile1) \ 1+ , ] }
+    { T{ isz  f ?t }       [ ?t (compile1) \ zero? , ] }
+    { T{ iff  f ?b ?t ?e } [ ?b (compile1) 
+                             [ ?t (compile1) ] [ ] make , 
+                             [ ?e (compile1) ] [ ] make , 
+                             \ if , ] }
+    { T{ pair f ?a ?b }    [ ?a (compile1) ?b (compile1) \ 2array , ] }
+    { T{ fst  f ?t }       [ ?t (compile1) \ first , ] }
+    { T{ snd  f ?t }       [ ?t (compile1) \ second , ] }
+  } match-cond ;  
+
+: compile1 ( a -- quot )
+  [ (compile1) ] [ ] make ;
+\end{verbatim}
+
+As you can see it is very similar to the interpreter. Instead of
+returning the result of the AST evaluation '(compile1)' appends the
+equivalent Factor code to the constructed quotation created in the
+'compile1' word.
+
+The implementation for handling 'lit' just appends the numeric value
+directly. For 'inc' it calls '(compile1)' on the term to be
+incremented so that gets appended to the quotation. It then appends
+the Factor '1+' word which will be used to increment it. The '\' is an
+escape mechanism to tell Factor to store the word itself rather than
+call it.
+
+The main complication is in the implementation of 'iff'. This word
+must delay the computation of the two terms of the 'iff' statement. To
+to this it creates Factor quotations with 'make' and then recursively
+calls '(compile1)' for the terms. The results of the compilation for
+this recursive call will be stored in the most recently created
+quotation rather than the one in the top level 'compile1' word. That
+is, nested 'make' calls are dynamically scoped.
+
+An example of usage of the compiler:
+
+\begin{verbatim}
+5 <lit> <inc> compile1 => [ 5 1 + ] 
+[ 5 1 + ] call => 6
+\end{verbatim}
+
+The 'driver' AST shown previously compiles to Factor correctly:
+
+\begin{verbatim}
+driver compile1 => [
+  5 1+ 1+ zero? [
+    6
+  ] [ 
+    7
+  ] if 42 8 9 2array 2array second first 2array
+]
+\end{verbatim}
+
+This can be compiled to native code using Factor or run in the Factor
+interpreter:
+
+\begin{verbatim}
+driver compile1 compile-quot execute => { 7 8 }
+driver compile1 call => { 7 8 }
+\end{verbatim}
+
+The final example is a compiler to Javascript. Again it follows the
+same basic outline of the interpreter. Instead of generating a Factor
+quotation it uses 'make' to generate a string:
+
+\begin{verbatim}
+: (compile2) ( a -- )
+  {
+    { T{ lit  f ?i }       [ ?i number>string % ] }
+    { T{ inc  f ?t }       [ ?t (compile2) "+1" % ] }
+    { T{ isz  f ?t }       [ ?t (compile2) "== 0" % ] }
+    { T{ iff  f ?b ?t ?e } [ 
+        "function() {if(" % 
+        ?b (compile2) 
+        ") {return " % 
+        ?t (compile2)
+        "} else { return " %
+        ?e (compile2)
+        "}}()" %
+      ] 
+    }
+    { T{ pair f ?a ?b }    [ "{ first:" % ?a (compile2) ",second:" % ?b (compile2) " }" % ] }
+    { T{ fst  f ?t }       [ ?t (compile2) ".first" % ] }
+    { T{ snd  f ?t }       [ ?t (compile2) ".second" % ] }
+  } match-cond ;  
+
+: compile2 ( a -- quot )
+  [ "(" % (compile2) ")" % ] "" make ;
+\end{verbatim}
+
+The main complication with this compiler was handling 'if'. The
+Javascript 'if' has no result so cannot be assigned immediately. So I
+wrap the 'if' in a function which is called immediately. The two terms
+of the 'if' use 'return' to return the result from the function. A
+simple example:
+
+\begin{verbatim}
+5 <lit> <inc> compile2 => "(5+1)"
+\end{verbatim}
+
+And 'driver' also compiles successfully:
+
+\begin{verbatim}
+driver compile2 => 
+"({ 
+    first:function() {
+      if(5+1+1== 0) {
+        return 6
+      } else { 
+        return 7
+      }
+    }(),
+    second: { 
+      first:42,
+      second: { first:8,second:9 } 
+    }.second.first 
+})"
+\end{verbatim}
+
+This result evaluates successfully in a browser. You can test it by clicking here.
