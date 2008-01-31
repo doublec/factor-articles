@@ -11,7 +11,7 @@ ARTICLES = \
 	lazy.tex \
 	ogg.tex \
 	parsers.tex \
-	partial-continuations.tex \
+	partialcontinuations.tex \
 	patternmatching.tex \
 	pegs.tex \
 	webapps.tex 
@@ -34,3 +34,5 @@ clean:
 	rm *.glo
 	rm *.idx
 	rm *.*~
+	rm *.log
+	rm *.toc
