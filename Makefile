@@ -15,6 +15,7 @@ ARTICLES = \
 	patternmatching.tex \
 	pegs.tex \
 	searchreplace.tex \
+	serialization.tex \
 	webapps.tex 
 
 all: factor-articles.pdf
