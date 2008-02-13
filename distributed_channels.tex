@@ -1,35 +1,46 @@
 \chapter{Distributed Channels}\label{dchannels}
 
-Following on from my Channels implementation, I've now added 'Remote
-Channels'. These are distributed channels that allow you to access
+Remote Channels are distributed channels that allow you to access
 channels in separate Factor instances, even on different machines on
-the network. It's based on my Distributed Concurrency work.
+the network. 
+
+\wordtable{
+\vocabulary{channels.remote}
+\ordinaryword{<remote-channel>}{<remote-channel> ( node id -- channel )}
+\ordinaryword{publish}{publish ( channel -- id )}
+}
 
 A channel can be made accessible by remote Factor nodes using the
-'publish' word. Given a channel this will return a long Id value that
-can be used by remote nodes to use the channel. For example:
+\texttt{publish} word. Given a channel this will return a unique
+identifier that can be used by remote nodes to use the channel. For
+example:
 
 \begin{verbatim}
-<channel> [ sieve ] spawn drop publish .
- => "ID12345678901234567890....."
+USING: concurrency channels channels.remote ;
+
+: (counter) ( channel n -- )
+  [ swap to ] 2keep 1+ (counter) ;
+    
+: counter ( channel -- )
+  2 (counter) ;    
+
+<channel> [ counter ] spawn drop publish .
+ => 12345678901234567890.....
 \end{verbatim}
 
-From a remote node you can create a <remote-channel> which contains
- the hostname and port of the node containing the channel, and the Id
- of that channel:
+Remote channels are implemented using
+distributed concurrency so you must start a node on the Factor
+instance you are using. This is done with 'start-node' giving the
+hostname and port:
+
+\wordtable{
+\vocabulary{concurrency.distributed}
+\ordinaryword{<node>}{<node> ( hostname port -- node )}
+\ordinaryword{start-node}{start-node ( hostname port -- )}
+}
 
 \begin{verbatim}
-"foo.com" 9000 <node> "ID1234..." <remote-channel>
-\end{verbatim}
-
-You can use 'from' and 'to' on the remote channel exactly as you can
- on normal channels. The data is marshalled over the network using the
- serialization library.  Remote channels are implemented using
- distributed concurrency so you must start a node on the Factor
- instance you are using. This is done with 'start-node' giving the
- hostname and port:
-
-\begin{verbatim}
+USE: concurrency.distributed
 "foo.com" 9000 start-node
 \end{verbatim}
 
@@ -37,41 +48,53 @@ Once this is done all published channels become available. Note that
 the hostname and port must be accessible by the remote machine so it
 can connect to send the data you request.
 
-As an experiment I published the prime number sieve example mentioned
-in my last post. It's running on one of my servers. To make it easy to
-create a <remote-channel> without needing to know the hostname and
-port I serialized the <remote-channel> instance, saved it in a file
-and made it available as [...server down sorry...].
+From a remote node you can create a \texttt{<remote-channel>} which contains
+the hostname and port of the node containing the channel, and the identifer
+of that channel.
 
-You can load this file into Factor, deserialize it and get the
-<remote-channel> instance. You can then call 'from' on it to get the
-next prime number in the series. Until they get so big that my Factor
-instance is DOS'd of course! The code to do this is:
+You can use 'from' and 'to' on the remote channel exactly as you can
+on normal channels. The data is marshalled over the network using the
+serialization library.  
 
 \begin{verbatim}
-USING: serialization http.client 
-       channels.remote concurrency.distributed ;
-
-"yourhostname-or-ip-address.com" 9000 start-server
-"[server-down-sorry]/prime.ser" http-get-stream 2nip 
-[ deserialize ] with-stream
-dup from .
-dup from .
-...etc...
+"foo.com" 9000 <node> 1234... <remote-channel> from .
 \end{verbatim}
 
-The '9000' can be any port number openly accessible on your machine. A
-current Factor bug means you may get an error in 'start-server' about
-an address already assigned if you run Linux. This is due to an
-interaction with ipv6 - you can ignore it, the server will start
-fine. 'start-server' needs to be run whenever you start our Factor
-instance.
+One way of setting up remote channel services is to serialize an instance of a \texttt{<remote-channel>} for a published channel and make it available on an HTTP server. The remote nodes can retrieve this via HTTP, deserialize it and use it. You can test this on a local machine by running two factor instances. In instance 1:
 
-The 'dup from .' duplicates the <remote-channel>, gets the next number
-from it and prints it. It may not be in sequence as other users may
-have gotten the next number before you.
+\begin{verbatim}
+USING: concurrency 
+       concurrency.distributed 
+       channels 
+       channels.remote 
+       serialize ;
 
-There is a lot of room for improvement and additions to the code. Feel
-free to hack at it and send in patches. Let me know some ideas on how
-this could be used in 'real world' applications.  
+"localhost" 9000 start-node 
 
+: (counter) ( channel n -- )
+  [ swap to ] 2keep 1+ (counter) ;
+    
+: counter ( channel -- )
+  2 (counter) ;    
+
+<channel> [ counter ] spawn drop 
+publish localnode swap <remote-channel>
+"counter.ser" <file-writer> [ serialize ] with-stream
+\end{verbatim}
+
+This creats a channel that returns incrementing integer numbers, as per our previous examples. A \texttt{<remote-channel>} is created with the published identifier for this channel and our node address. This is serialized to a file called ``counter.ser''. A remote node can deserialize this file and use it to access the channel immediately. In factor instance 2:
+
+\begin{verbatim}
+USING: concurrency 
+       concurrency.distributed 
+       channels 
+       channels.remote 
+       serialize ;
+
+"localhost" 9001 start-node 
+"counter.ser" <file-reader> [ deserialize ] with-stream
+dup from .
+ => 2
+dup from .
+ => 3
+\end{verbatim}

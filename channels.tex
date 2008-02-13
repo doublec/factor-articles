@@ -7,10 +7,17 @@ Communicating Sequential Processes.
 
 To play around with some of the ideas in the video I created a quick implementation of channels for Factor and converted a couple of the NewSqueak examples.
 
-The <channel> word creates a channel that threads can send data to and
-receive data from. The 'to' word sends data to a channel. It is a
+\wordtable{
+\vocabulary{channels}
+\ordinaryword{<channel>}{<channel> ( -- channel )}
+\ordinaryword{to}{to ( value channel -- )}
+\ordinaryword{from}{from ( channel -- value )}
+}
+
+The \texttt{<channel>} word creates a channel that threads can send data to and
+receive data from. The \texttt{to} word sends data to a channel. It is a
 synchronous send and blocks waiting for a receiver if there is
-none. The 'from' word receives data from a channel. It will block if
+none. The \texttt{from} word receives data from a channel. It will block if
 there is no sender.
 
 There can be multiple senders waiting, and if a thread then receives
@@ -18,31 +25,31 @@ on the channel, a random sender will be released to send its
 data. There can also be multiple receivers blocking. A random one is
 selected to receive the data when a sender becomes available.
 
-I'm not sure if I've got the best stack effect ordering for the words
-but it gives something to experiment with and work out the best
-interface. I've not yet done a 'select' or 'mux' words.
-
 Here is the 'counter' example ported from NewSqueak:
 
 \begin{verbatim}
+USING: channels concurrency ;
+
 : (counter) ( channel n -- )
-    [ swap to ] 2keep 1+ (counter) ;
+  [ swap to ] 2keep 1+ (counter) ;
     
 : counter ( channel -- )
-    2 (counter) ;    
+  2 (counter) ;    
 
 : counter-test ( -- n1 n2 n3 )
-     [ counter ] spawn drop 
-    [ from ] keep [ from ] keep from ;
+  <channel> [ counter ] spawn drop 
+  [ from ] keep 
+  [ from ] keep 
+  from ;
+
+counter-test 
+ => 2
+    3
+    4
 \end{verbatim}
 
-Given a channel, the 'counter' word will send numbers to it,
-incrementing them by one, starting from two. 'counter-test' creates a
-channel, spawns a process to run 'counter', and then receives a few
+Given a channel, the \texttt{counter} word will send numbers to it,
+incrementing them by one, starting from two. \texttt{counter-test} creates a
+channel, spawns a process to run \texttt{counter}, and then receives a few
 values from the channel.
 
-It'll be interesting to compare how well CSP works in a concatenative
- language vs the message passing concurrency library I implemented
- previously. The CSP implementation is simple enough that I should be
- able to get it going in the Factor->Javascript system fairly
- easily. That would give CSP on the browser.
