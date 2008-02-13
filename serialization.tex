@@ -1,0 +1,47 @@
+\chapter{Serialization}\label{serialization}
+
+\section{Serializing Objects}
+
+Serialisation supports most Factor types and is extensible by adding methods to generic functions. You can even serialize quotations containing words, and so long as those words exist in the target system, the deserialization will link them correctly and the quotation is callable. Actual code doesn't serialize at this stage though.
+
+An example of usage:
+
+\begin{verbatim}
+"serialize" require
+USE: serialize
+
+[
+  [ "Hello World!" serialize ] with-serialized
+] string-out
+  => ...serialized format as a string...
+
+[
+  [ deserialize ] with-serialized
+] string-in 
+  => "Hello World!"
+\end{verbatim}
+
+The 'string-out' and 'string-in' shown above are standard words to direct all output to go to and from strings respectively. You can also serialize to files and deserialize them on any other Factor system.
+
+\section{Serializing Gadgets}
+I've managed to get the serialization code to the point where it serializes user interface gadgets. To demonstrate it I serialized an in-progress game of Space Invaders, uploaded the serialized file to my web server and someone else on IRC downloaded it, deserialized it, and continued where the game left off.
+
+Given the gadget on the stack, serialization to a file was as easy as:
+
+\begin{verbatim}
+[ 
+  "filename.ser" <file-writer> [ 
+    unparent serialize 
+  ] with-stream 
+] with-serialized
+\end{verbatim}
+
+To get the instance running again:
+
+\begin{verbatim}
+[ 
+  "filename.ser" <file-writer> [ 
+    deserialize 
+  ] with-stream 
+] with-serialized "Space Invaders" open-titled-window
+\end{verbatim}
