@@ -14,6 +14,7 @@ ARTICLES = \
 	partialcontinuations.tex \
 	patternmatching.tex \
 	pegs.tex \
+	searchreplace.tex \
 	webapps.tex 
 
 all: factor-articles.pdf

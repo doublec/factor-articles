@@ -1,0 +1,44 @@
+\chapter{Search and Replace with PEGs}\label{seachreplace}
+
+The Parsing Expression Grammar library has code to allow search and replace using parsers. The idea was to be able to do similar things with parser combinators that regular expressions are commonly used for. The words are in the \texttt{peg.search} vocabulary.
+
+\wordtable{
+\vocabulary{peg.search}
+\ordinaryword{search}{search ( string parser -- seq )}
+}
+
+The 'search' word takes a string and a parser off the stack. It returns a sequence of all substrings in the original string that were successfully parsed by the parser. The result returned in the sequence is the AST produced by the parser. For example:
+
+\begin{verbatim}
+: bold ( -- parser )
+  [
+    "*" token ,
+    [ CHAR: * = not ] satisfy repeat1 ,
+    "*" token ,
+  ] seq* [ second >string ] action ;
+
+"hello *world* from *factor*" bold search . 
+ => { "world" "factor" } 
+
+"one 100 two 300" 'integer' search .
+ => { 100 300 }
+
+"one 100 two 300" 'integer' [ 2 * ] action search .
+ => { 200 600 }
+\end{verbatim}
+
+\wordtable{
+\vocabulary{peg.search}
+\ordinaryword{replace}{replace ( string parser -- result )}
+}
+
+The 'replace' word takes a string and parser off the stack. It returns the original string with all substrings that successfully parse by the parser replaced by the result of that parser.
+
+\begin{verbatim}
+"Hello *World*" bold [ 
+  "<strong>" swap "</strong>" 3append 
+] action replace .
+ => "Hello <strong>World</strong>"
+\end{verbatim}
+
+
