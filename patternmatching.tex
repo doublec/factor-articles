@@ -1,37 +1,23 @@
 \chapter{Pattern Matching}\label{patternmatching}
 
-For the concurrency library in Factor I've struggled to come up with
-good ways of writing the main loop of processes that handle
-messages. Erlang makes it so nice being able to create tuples and
-break them apart using pattern matching.
-
-I've gone from using Factor arrays and breaking them apart with
-'first', etc to using generic functions. The latter works well but
-ends up quite verbose for small servers. You need to create tuple
-types for the different messages - and handling tagged messages to
-reply to had to be done differently to other messages.
-
-To make this sort of thing easier I've written a 'match' word for
-Factor that does pattern matching. I based it on code from Paul
-Graham's excellent Common Lisp book, On Lisp.
-
 Given a Factor sequence or primitive type you can pattern match and
 create bindings to symbols with a special format. Any symbol that
 begins with a '?' character is used as a pattern match variable, and
 binds to the value in a matching sequence. Here's a simple example:
 
-\begin{verbatim}
-"match" require
+\wordtable{
+\vocabulary{match}
+\ordinaryword{match}{match~( value1 value2 -- bindings )}
+}
+
+\begin{alltt}
 USE: match
 
-SYMBOL: ?a
-SYMBOL: ?b
-SYMBOL: ?c
+MATCH-VARS: ?a ?b ?c ;
 
-{ 1 2 3 } { ?a ?b ?c } match . 
-  => H{ { ?a 1 } { ?b 2 } { ?c 3 } }
-\end{verbatim}
-
+\{ 1 2 3 \} \{ ?a ?b ?c \} match . 
+  \textbf{H\{ \{ ?a 1 \} \{ ?b 2 \} \{ ?c 3 \} \}}
+\end{alltt}
 
 The two sequences match in that they are both sequences with three
 items. So the result is a hashtable containing the pattern match
@@ -39,13 +25,13 @@ variables as keys and the values of those variables in the second
 sequence as the value. If items in the sequence are not pattern match
 variables then they must match exactly:
 
-\begin{verbatim}
-{ 1 2 3 } { 1 2 ?a } match .
-  => H{ { ?a 3 } }
+\begin{alltt}
+\{ 1 2 3 \} \{ 1 2 ?a \} match .
+  \textbf{H\{ \{ ?a 3 \} \}}
 
-{ 1 2 3 } { 2 2 ?a } match .
-  => f
-\end{verbatim}
+\{ 1 2 3 \} \{ 2 2 ?a \} match .
+  \textbf{f}
+\end{alltt}
 
 
 The second example doesn't match as the first element in both
@@ -53,62 +39,91 @@ sequences is not the vaue '2'.
 
 Matching works recursively too:
 
-\begin{verbatim}
-{ 1 2 { 3 4 } { 5 6 } } { 1 2 ?a { ?b ?c } } match .
-  => H{ { ?a { 3 4 } } { ?b 5 } { ?c 6 } }
-\end{verbatim}
+\begin{alltt}
+\{ 1 2 \{ 3 4 \} \{ 5 6 \} \} \{ 1 2 ?a \{ ?b ?c \} \} match .
+  \textbf{H\{ \{ ?a \{ 3 4 \} \} \{ ?b 5 \} \{ ?c 6 \} \}}
+\end{alltt}
 
 
-This type of pattern matching is very useful for deconstructing messages sent to distributed factor objects. But even more useful is to be able to have something like 'cond' but working directly with patterns. This is what 'match-cond' does. It takes a sequence and an array of arrays. Each sub-array contains the pattern to match the sequence against, and a quotation to execute if that pattern matched. The quotation is executed with the hashtable result of the pattern match bound in the current namespace scope, allowing easy retrieval of the pattern match variables.
+This type of pattern matching is very useful for deconstructing
+messages sent to distributed factor objects. But even more useful is
+to be able to have something like \verb|cond| but working directly with
+patterns. This is what \verb|match-cond| does. It takes a sequence and an
+array of arrays. Each sub-array contains the pattern to match the
+sequence against, and a quotation to execute if that pattern
+matched. The quotation is executed with the hashtable result of the
+pattern match bound in the current namespace scope, allowing easy
+retrieval of the pattern match variables.
+
+\wordtable{
+\vocabulary{match}
+\ordinaryword{match-cond}{match-cond~( assoc -- )}
+}
 
 It sounds complex but is actually very easy in practice. Here what an
-example 'counter' process might look like using 'match-cond':
+example 'counter' process might look like using \verb|match-cond|:
 
 \begin{verbatim}
-SYMBOL: ?value
-SYMBOL: ?from
-SYMBOL: ?tag
+USING: match concurrency.messaging ;
+
+SYMBOL: increment
+SYMBOL: decrement
+SYMBOL: get
+MATCH-VARS: ?value ?from ?tag ;
 
 : counter ( value -- )
   receive {
-    { { increment ?value } [ ?value get + counter ] }
-    { { decrement ?value } [ ?value get - counter ] }
-    { { get ?from }        [ dup ?from get send counter ] }
-    { _                    [ "Unmatched message" print counter ] }
-  } match-cond ;
-
+    { { increment ?value } [ ?value + ] }
+    { { decrement ?value } [ ?value - ] }
+    { { get ?from }        [ dup ?from send ] }
+    { _                    [ "Unmatched message" print flush ] }
+  } match-cond counter ;
 \end{verbatim}
 
-This is a process that keeps track of a count value. You can send messages to increment or decrement the count by an amount, or to get the value and send it back to the calling process. So sends/receives look like:
+This is a process that keeps track of a count value. You can send
+messages to increment or decrement the count by an amount, or to get
+the value and send it back to the calling process. So sends/receives
+look like:
 
-\begin{verbatim}
-[ 0 counter ] spawn
+\begin{alltt}
+USING: threads ;
+
+[ 0 counter ] "counter" spawn
 { increment 5 } over send
 { decrement 10 } over send
 [ get , self , ] { } make swap send receive .
-  => -5
-\end{verbatim}
+  \textbf{-5}
+\end{alltt}
 
-
-This works out to be quite readable and much nicer than my previous attempts. The match and match-cond code is still a work in progress. I plan to add the ability to pattern match on tuples, all the factor sequence types, and to repeat pattern match variables to ensure the same repitition occurs in the target sequence. For example:
-
-\begin{verbatim}
-T{ person f "chris" "double" } T{ person f ?first ?last } match .
-  => H{ { ?first "chris" } { ?last "double" } }
-
-{ "one" "two" "one" "two" } { ?a ?b ?a ?b } match .
-  => H{ { ?a "one" } { ?b "two" } }
-
-{ "1" "two" "one" "two" } { ?a ?b ?a ?b } match .
-  => f
-\end{verbatim}
-
-
-The match library is split out from concurrency since it's likely to
-be quite usable for other things in Factor. It's available from my
-repository (and is likely to be available shortly from the main Factor
-repository). To get the patches from my repository:
+One thing to be aware of with \verb|match-cond| is that calls in the
+quotation side of a condition are not tail recursive. So the following
+looks equivalent to the previous counter example but is not tail
+recursive and will consume call stack space on each message,
+eventually failing when it overflows:
 
 \begin{verbatim}
-darcs get http://www.bluishcoder.co.nz/repos/factor
+: counter ( value -- )
+  receive {
+    { { increment ?value } [ ?value + counter ] }
+    { { decrement ?value } [ ?value - counter ] }
+    { { get ?from }        [ dup ?from send counter ] }
+    { _                    [ "Unmatched message" print flush counter ] }
+  } match-cond ;
 \end{verbatim}
+
+Pattern matching on tuples, and the repeating presence of match
+variables also works:
+
+\begin{alltt}
+TUPLE: person first last ;
+MATCH-VARS: ?first ?last ;
+
+T\{ person f "chris" "double" \} T\{ person f ?first ?last \} match .
+  \textbf{H\{ \{ ?first "chris" \} \{ ?last "double" \} \}}
+
+\{ "one" "two" "one" "two" \} \{ ?a ?b ?a ?b \} match .
+  \textbf{H\{ \{ ?a "one" \} \{ ?b "two" \} \}}
+
+\{ "1" "two" "one" "two" \} \{ ?a ?b ?a ?b \} match .
+  \textbf{f}
+\end{alltt}
