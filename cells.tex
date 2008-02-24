@@ -72,7 +72,8 @@ In this example I create a global value called 'time' that holds a
 model wrapping the current date and time:
 
 \begin{verbatim}
-USE: calendar
+USING: calendar models ;
+
 
 SYMBOL: time
 now <model> time set-global
@@ -83,26 +84,25 @@ The model here wraps the current date and time produced by
 thread which sets the value every second:
 
 \begin{verbatim}
-USE: threads
+USE: alarms
 
 : update-time ( -- )
-  now time get set-model 1000 sleep update-time ;
+  now time get-global set-model ;
 
-[ update-time ] in-thread
+[ update-time ] now 1 seconds add-alarm
 \end{verbatim}
 
 The \verb|update-time| words gets the current date and time (using \verb|now|)
-and sets the model's value to it. It does this every 1,000
-milliseconds.
+and sets the model's value to it. An alarm is added to do this every second.
 
-We can confirm that this value is updating by doing a gettin the value of
+We can confirm that this value is updating by getting the value of
 the 'time' variable and see that it changes between calls:
 
 \begin{alltt}
-time get model-value timestamp>http-string .
+time get-global model-value timestamp>http-string .
   \textbf{"Sun, 20 Jan 2008, 02:02:02 GMT"} 
 
-time get model-value timestamp>http-string .
+time get-global model-value timestamp>http-string .
   \textbf{"Sun, 20 Jan 2008, 02:04:02 GMT" }
 \end{alltt}
 
@@ -110,7 +110,9 @@ A label gadget that displays this value, and is updated as it changes,
 can be created and displayed with:
 
 \begin{verbatim}
-time get [ timestamp>http-string ] <filter> <label-control> gadget.
+USING: ui.gadgets.labels ui.gadgets.panes ;
+
+time get-global [ timestamp>http-string ] <filter> <label-control> gadget.
 \end{verbatim}
 
 Notice I'm using \verb|<filter>| to take the time value and convert it into a string. A \verb|<label-control>| can only display strings, so it has the filtered value as its data. The gadget displayed on the listener will update automatically as the time changes every second.
