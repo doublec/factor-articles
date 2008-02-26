@@ -112,3 +112,107 @@ EBNF>
 This grammar as defined works and can parse PL/0 programs. I'll extend
 this as I improve the EBNF routines, adding actions, etc to generated
 a decent AST.
+
+\section{Parsing Arithmetic Expressions}
+
+This is it without parenthesis handling. I'll leave it as an exercise
+to add that. I included code to compile the ast into a factor
+expression. Use like:
+
+\begin{verbatim}
+"2+3*4-6/2" expr parse parse-result-ast .
+
+"2+3*4-6/2" expr parse parse-result-ast ast-compile dup .
+
+"2+3*4-6/2" expr parse parse-result-ast ast-compile call
+\end{verbatim}
+
+The grammar is a direct translation of the one shown in the wikipedia
+peg article:
+
+\begin{verbatim}
+http://en.wikipedia.org/wiki/Parsing_expression_grammar
+\end{verbatim}
+
+The only complication is transforming the result of using 'repeat0'
+into a tree by doing a fold. This is standard practice with parsing
+expression grammars that don't handle left recursion. When I add left
+recursion this won't be needed and the grammar will be simplified.
+See this article for details:
+
+\begin{verbatim}
+http://vpri.org/pdf/packrat_TR-2007-002.pdf
+\end{verbatim}
+
+\begin{verbatim}
+USING: sequences kernel math words math.parser namespaces peg ;
+IN: scratchpad
+
+: seq* ( quot -- parser )
+ { } make seq ; inline
+
+: choice* ( quot -- parser )
+ { } make choice ; inline
+
+TUPLE: operator lhs op rhs  ;
+C: <operator> operator
+
+: operator-fold ( lhs seq -- value )
+ #! Perform a fold of a lhs, followed by a sequence of pairs being
+ #! { operator rhs } in to a tree structure of the correct precedence.
+ swap [ first2 <operator> ] reduce ;
+
+: digits ( -- parser )
+ CHAR: 0 CHAR: 9 range repeat1 [ string>number ] action ;
+
+: plus ( -- parser )
+ "+" token ;
+
+: minus ( -- parser )
+ "-" token ;
+
+: multiply ( -- parser )
+ "*" token ;
+
+: divide ( -- parser )
+ "/" token ;
+
+DEFER: expr
+
+: value ( -- parser )
+ [ digits , [ expr ] delay , ] choice* ;
+
+: product ( -- parser )
+ [
+   value ,
+   [
+     [ multiply , divide , ] choice* ,
+     value ,
+   ] seq* repeat0 ,
+ ] seq* [ first2 operator-fold ] action ;
+
+: sum ( -- parser )
+ [
+   product ,
+   [
+     [ plus , minus , ] choice* ,
+     product ,
+   ] seq* repeat0 ,
+ ] seq* [ first2 operator-fold ] action ;
+
+: expr ( -- parser )
+ sum ;
+
+GENERIC: (compile) ( ast -- )
+
+M: number (compile) ( ast -- )
+ , ;
+
+M: operator (compile) ( ast -- )
+ dup operator-lhs (compile)
+ dup operator-rhs (compile)
+ operator-op "math" lookup , ;
+
+: ast-compile ( ast -- quot )
+ [ (compile) ] [ ] make ;
+\end{verbatim}
