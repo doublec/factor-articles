@@ -1,0 +1,160 @@
+\chapter{Embedded Domain Specific Languages in Factor}\label{pegsebnf}
+
+I've been doing some experimenting with the emedded grammar code I
+wrote for Factor, trying to make it easier to use and a bit more
+useful for real world projects.
+
+My inspiration for the changes has been seeing the kinds of things
+OMeta can do and the examples in the Steps towards the reinvention of
+programming from the Viewpoints Research Institute.
+
+The original parsing expression grammar code (in the vocab 'peg')
+produced a data structure composed of Factor tuples that was
+interpreted at runtime via a call to the word 'parse'. It still has
+the data structure of tuples but now it can be compiled into Factor
+quotations, which are then compiled to native machine code via the
+Factor compiler. The 'parse' word calls 'compile' on the datastructure
+and calls it.
+
+I created a parsing word that allows you to embed the peg expression
+directly in code, have it compiled to a quotation at parse time, and
+then called at runtime. Usage looks like:
+
+\begin{verbatim}
+"1+2" [EBNF expr=[0-9] '+' [0-9] EBNF] call
+\end{verbatim}
+
+The older peg code had an \texttt{<EBNF ... EBNF>} embedded language and each
+rule in the language was translated to a Factor word. That's now
+changed to an EBNF: definition. An example:
+
+\begin{verbatim}
+EBNF: expr 
+digit    = [0-9]            => [[ digit> ]]
+number   = (digit)+         => [[ 10 digits>integer ]]
+value    =   number 
+           | ("(" exp ")")  => [[ second ]]
+
+fac      =   fac:x "*" value:y  => [[ drop x y * ]]
+           | fac:x "/" value:y  => [[ drop x y / ]]
+           | number
+
+exp      =   exp:x "+" fac:y    => [[ drop x y + ]]
+           | exp:x "-" fac:y    => [[ drop x y - ]]
+           | fac
+;EBNF
+\end{verbatim}
+
+This creates a word, 'expr', that runs the last rule in the embedded
+language (the 'exp' rule in this case) on the string passed to it:
+
+\begin{verbatim}
+"1+2*3+4" expr parse-result-ast .
+ => 11
+\end{verbatim}
+
+If you've used peg.ebnf before you'll see some new features in this code:
+
+\begin{itemize}
+\item You can do character ranges using code like \texttt{[a-zA-Z]} to
+  match upper and lowercase characters, etc.
+
+\item Factor quotations can be embedded to process the results of
+  choices. Anything between the \texttt{[[ ... ]]} will be run when that choice
+  succeeds and the result put in the abstract syntax tree for that
+  rule. The default AST produced by the rule is on the stack of the
+  quotation. The example above drops this in some cases, and
+  transforms it in others.
+
+\item Rule elements can have variable names suffixed to it and these
+  can be referenced in the action quotations. This is implemented
+  using locals. This can be seen in EBNF code like this:
+\begin{verbatim}
+exp:x "+" exp:y => [[ drop x y + ]]
+\end{verbatim}
+
+      Usually that rule produces an AST consisting of a 3 element
+      sequence, each element being the AST produced by the rules
+      elements. The action quotation is transformed into:
+
+\begin{verbatim}
+[let* | x [ 0 over nth ] 
+        y [ 2 over nth ] |
+  drop x y + 
+] with-locals
+\end{verbatim}
+
+      This is efficient and makes the grammar easier to read.
+
+\item Another major new feature is grammars now handle direct and
+  indirect left recursion. I implemented this from the VPRI paper
+  Packrat Parsers Can Support Left Recursion. It makes converting
+  existing grammars to peg grammars much easier.
+
+\item Semantic actions have been added. These are like normal
+  \texttt{[[ ... ]]} actions except they have stack effect \texttt{(
+    ast -- bool )}. Given an abstract syntax tree from the preceding
+  element, it should return a boolean indicating whether the parse
+  succeeded or not. For example:
+\begin{verbatim}
+odd= [0-9] ?[ digit> odd? ]?
+\end{verbatim}
+
+\item Some of the syntax has changed. Previously \texttt{\{ ... \}}
+  was used for repeating zero or more times and \texttt{[ ... ]} was
+  for optional. Now I use \texttt{(...)*}, \texttt{(...)+},
+  \texttt{(...)?}, for zero or more, one or more, and optional
+  respectively. The dot (\texttt{.}) is used to match anything at that
+  point. Terminals can be enclosed in single or double quotations.
+
+\item There is a 'rule' word that can be used to get a single rule
+  from a compiled grammar:
+\begin{verbatim}
+EBNF: foo
+number=([0-9])+
+expr  = number '+' number
+;EXPR
+
+"1+2" foo parse-result-ast => { "1" "+" "2" }
+"1+2" "number" \ foo rule parse parse-result-ast => "1"
+\end{verbatim}
+
+      Notice the 'rule' word returns the parser object rather than the
+      compiled quotation. This is useful for testing and further
+      combining with other parsers.
+\end{itemize}
+
+These changes are in the main Factor repository. There is the peg.pl0
+and peg.expr vocabs as examples. The peg.ebnf code is in an
+experimental state and is likely to change a lot until I'm satisfied
+with it so be aware that it might not be wise to use it in stable code
+unless you're happy with tracking the changes. I welcome feedback and
+ideas though.
+
+One feature I'm currently working on but haven't put in the main
+repository yet is the ability to use the embedded grammar DSL to
+operate over Factor arrays and tuples. This allows writing an embedded
+grammar to produced an AST, and another embedded grammar to transform
+that AST into something else. Here's what code to transform an AST
+currently looks like:
+
+\begin{verbatim}
+TUPLE: plus lhs rhs ;
+
+EBNF: adder
+num   = . ?[ number? ]? 
+plus  = . ?[ plus? ]? expr:a expr:b => [[ drop a b + ]]
+expr  =  plus | num
+;EBNF
+
+T{ plus f 1 T{ plus f 2 3 } } adder parse-result-ast .
+
+=> 6
+\end{verbatim}
+
+This uses features I've already discussed, like semantic actions, to
+detect the type of the object. The difference is that the parser
+produced by EBNF: operates not on strings, but on an abstract sequence
+type that is implemented for strings, sequence, and tuples. I'm still
+playing around with ideas for this but I think it'll be a useful way
+to reuse grammars and string them together to perform tasks.
