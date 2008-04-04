@@ -99,6 +99,8 @@ We can confirm that this value is updating by getting the value of
 the 'time' variable and see that it changes between calls:
 
 \begin{alltt}
+USE: calendar.format
+
 time get-global model-value timestamp>http-string .
   \textbf{"Sun, 20 Jan 2008, 02:02:02 GMT"} 
 
@@ -110,7 +112,7 @@ A label gadget that displays this value, and is updated as it changes,
 can be created and displayed with:
 
 \begin{verbatim}
-USING: ui.gadgets.labels ui.gadgets.panes ;
+USING: ui.gadgets.labels ui.gadgets.panes calendar.format ;
 
 time get-global [ timestamp>http-string ] <filter> <label-control> gadget.
 \end{verbatim}
