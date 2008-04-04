@@ -89,9 +89,9 @@ look like:
 USING: threads ;
 
 [ 0 counter ] "counter" spawn
-{ increment 5 } over send
-{ decrement 10 } over send
-[ get , self , ] { } make swap send receive .
+\{ increment 5 \} over send
+\{ decrement 10 \} over send
+[ get , self , ] \{ \} make swap send receive .
   \textbf{-5}
 \end{alltt}
 
