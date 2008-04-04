@@ -21,10 +21,10 @@ interpreter like Rhino, or in a web browser.
 
 To more easily re-use the AST across the two examples I added the
 ability to pattern match on tuples to the 'match' contrib
-library. This can be obtained from the standard Factor darcs
+library. This can be obtained from the standard Factor git
 repository:
 \begin{verbatim}
-darcs get http://www.factorcode.org/repos
+git clone git://factorcode.org/git/factor.git
 \end{verbatim}
 
 
@@ -33,11 +33,11 @@ repository. The instructions on how to do this are on
 factorcode.org. For an Intel x86 linux machine the steps would be:
 
 \begin{verbatim}
-darcs get http://www.factorcode.org/repos
-cd factor/Factor
-make linux-x86
-wget http://www.factorcode.org/images/latest/boot.image.x86
-./f boot.image.x86
+git clone git://factorcode.org/git/factor.git
+cd factor
+make linux-x86-32
+wget http://factorcode.org/images/latest/boot.x86.32.image
+./factor -i=boot.x86.32.image
 \end{verbatim}
 
 The examples here should also work with the released Factor 0.85 as
@@ -45,7 +45,6 @@ long as you replace 'contrib/match/match.factor' with the version from
 my repository. To load the 'match' library in Factor use:
 
 \begin{verbatim}
-"contrib/match" require
 USE: match
 \end{verbatim}
 

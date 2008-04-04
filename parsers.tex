@@ -109,12 +109,12 @@ result from the 'parse-result' tuple. The result, '49', is the
 character code of the successfully parsed digit. Ideally I want the
 actual number returned rather than the character code.
 
-The '<@' word applies a transformation to the parse tree of a
+The '$<$@' word applies a transformation to the parse tree of a
 parser. It converts an existing parser to one that does what the
-original parser did but has the transformation applied. '<@' takes a
+original parser did but has the transformation applied. '$<$@' takes a
 quotation on the stack with stack effect ( old-tree -- new-tree
 ). This quotation is called to perform the transformation. One way to
-remember the effect of '<@' is to note that '<' sign points to the
+remember the effect of '$<$@' is to note that '$<$' sign points to the
 parser being transformed. Here is 'digit' converted to return a
 number:
 
@@ -125,9 +125,9 @@ LAZY: 'digit' ( -- parser )
 "123" 'digit' parse car parse-result-parsed . => 1
 \end{verbatim}
 
-'digit>' is a standard Factor word that coverts the character code of
+'digit$>$' is a standard Factor word that coverts the character code of
 a digit into the digit itself. A number is one or more digits in a
-row. The <+> word takes a parser as input and returns a parser that
+row. The $<$+$>$ word takes a parser as input and returns a parser that
 parses one or more instances of the original. It has the same meaning
 as '+' in regular expressions. This allows a 'number' parser word to
 be written as:
@@ -140,8 +140,8 @@ LAZY: 'number' ( -- parser )
 \end{verbatim}
 
 Notice here that the result is an array of the digits in the
-number. This is the parse tree that <+> generates - an array of the
-results of the original parser. By using '<@' this can be converted
+number. This is the parse tree that $<$+$>$ generates - an array of the
+results of the original parser. By using '$<$@' this can be converted
 into a numeric value using Factor's 'reduce' word (basically a left
 fold):
 
@@ -168,7 +168,7 @@ then the remaining parse results aren't actually computed.
 
 Next on the list is identifiers. These are any sequences of characters
 that are not numbers, spaces, or parenthesis. The 'satisfy' word can
-be used for this, combined with <+>:
+be used for this, combined with $<$+$>$:
 
 \begin{verbatim}
 LAZY: 'identifier' ( -- parser )
@@ -183,7 +183,7 @@ LAZY: 'identifier' ( -- parser )
 "foo" 'identifier' parse car parse-result-parsed . => "foo"
 \end{verbatim}
 
-The '<@' word is used to transform the result into a string otherwise
+The '$<$@' word is used to transform the result into a string otherwise
 we'd get an array of the character codes in the identifier as a
 result.
 
@@ -198,13 +198,13 @@ LAZY: 'atom' ( -- parser )
 "foo" 'atom' parse car parse-result-parsed . => "foo"
 \end{verbatim}
 
-It uses '<|>', known as the choice word. It takes two parsers on the
+It uses '$<|>$', known as the choice word. It takes two parsers on the
 stack, and generates a parser which when run will try the first parser
 on the input string. If it fails it will then try the second
 parser. It returns the list of successes resulting from both parses.
 
 A first cut at parsing a single expression like '(set a 10)' requires
-a sequencing parser combinator. This is '<\&>'. It takes two parsers
+a sequencing parser combinator. This is '$<$\&$>$'. It takes two parsers
 and returns a resulting parser which when run will run the first
 parser on the input string, and then run the second parser on the
 remaining unparsed portion of the input string of each result from the
@@ -220,12 +220,12 @@ LAZY: 'expr1' ( -- parser )
   { { "(" 123 } ")" }
 \end{verbatim}
 
-This results in a very ugly parse tree. The '<\&>' word returns a parse
+This results in a very ugly parse tree. The '$<$\&$>$' word returns a parse
 tree which is an array of the two parsers it uses. Since we have two
-'<\&>' calls we get nested results. This can be fixed using two
-variants of '<\&>'. They are '<\&' and '\&>'. These words do the same as
-'<\&>' but don't put the result of one of the parsers in the parse
-tree. The '>' or '<' point to the parser that will have the result
+'$<$\&$>$' calls we get nested results. This can be fixed using two
+variants of '$<$\&$>$'. They are '$<$\&' and '\&$>$'. These words do the same as
+'$<$\&$>$' but don't put the result of one of the parsers in the parse
+tree. The '$>$' or '$<$' point to the parser that will have the result
 returned. Here's a new version that has a nicer parse tree using these
 words:
 
@@ -238,15 +238,15 @@ LAZY: 'expr2' ( -- parser )
 "(123)" 'expr2' parse car parse-result-parsed . => 123
 \end{verbatim}
 
-Notice the variants of '<\&>' used both select the result of the 'atom'
+Notice the variants of '$<$\&$>$' used both select the result of the 'atom'
 parser to be included in the parse tree and not the results of the
 parenthesis parsers.
 
 There is still a problem with the expression parser. It doesn't handle
-more than one 'atom' in the expression. Similar to '<+>' there is
-'<*>' which takes a parser and returns a new parser which when called
+more than one 'atom' in the expression. Similar to '$<$+$>$' there is
+'$<$*$>$' which takes a parser and returns a new parser which when called
 parses zero or more instances of the original parser. The parse tree
-for the result of '<*>' is an array of the results of the original
+for the result of '$<$*$>$' is an array of the results of the original
 parser:
 
 \begin{verbatim}
@@ -266,7 +266,7 @@ the input string and then calls the original parser. The effect is to
 produce a parser that ignores white space.
 
 This gets close to what out test case requires but it returns an array
- not a quotation. Using '<@' fixes this:
+ not a quotation. Using '$<$@' fixes this:
 
 \begin{verbatim}
 LAZY: 'expr4' ( -- parser )
