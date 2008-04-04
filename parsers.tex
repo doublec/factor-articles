@@ -21,19 +21,18 @@ get this going are at the Factor website. Basic instructions for an
 Intel Linux based machine would go something like:
 
 \begin{verbatim}
-darcs get http://www.factorcode.org/repos
-cd repos/Factor
-make linux-x86
-wget http://www.factorcode.org/boot.image.x86
-./f boot.image.x86
-./f
+git clone http://www.factorcode.org/
+cd factor
+make linux-x86-32
+wget http://factorcode.org/images/latest/boot.x86.32.image
+./factor -i=boot.x86.32.image
+./factor
 \end{verbatim}
 
 To run the examples from within Factor you will need to load the
 parser-combinators module and use it:
 
 \begin{verbatim}
-"contrib/parser-combinators" require
 USE: parser-combinators
 USE: lazy-lists
 \end{verbatim}
