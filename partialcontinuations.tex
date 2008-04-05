@@ -10,7 +10,7 @@ Factor. Just remember that the partial continuation has stack effect (
 a -- b ) and the quotations passed to bshift and breset have stack
 effect ( pcc -- v ) and ( -- v ) respectively.
 
-'breset' marks the scope of the partial continuation. If 'bshift' is
+`breset' marks the scope of the partial continuation. If `bshift' is
 not used then the value returned by the quotation is left on the
 stack:
 
@@ -20,7 +20,7 @@ stack:
 \end{verbatim}
 
 
-An example with 'bshift':
+An example with `bshift':
 
 \begin{verbatim}
 [
@@ -30,8 +30,8 @@ An example with 'bshift':
 \end{verbatim}
 
 
-In this case the partial continuation passed to the 'bshift' quotation
-represents the computation '1 X +' where 'X' is replaced by the value
+In this case the partial continuation passed to the `bshift' quotation
+represents the computation `1 X +' where `X' is replaced by the value
 passed to the partial continuation. In this case 5, resulting in a
 result of 6. Additional calls can be made to the same continuation:
 
@@ -43,10 +43,10 @@ result of 6. Additional calls can be made to the same continuation:
 \end{verbatim}
 
 
-This calls the '1 X +' partial continuation twice. First with '5'
-returning the value '6'. Which is then passed to it again, returning
-'7'. The partial continuation does not need to be called. Values that
-'fall through' cause the result to be returned from the 'breset'
+This calls the `1 X +' partial continuation twice. First with `5'
+returning the value `6'. Which is then passed to it again, returning
+`7'. The partial continuation does not need to be called. Values that
+`fall through' cause the result to be returned from the `breset'
 quotation:
 
 \begin{verbatim}
@@ -58,7 +58,7 @@ quotation:
 
 
 Here's a fun example translated from Oleg's posting. The following
-'range' function has some interesting properties:
+`range' function has some interesting properties:
 
 \begin{verbatim}
  : range ( r from to -- )
@@ -68,10 +68,10 @@ Here's a fun example translated from Oleg's posting. The following
 \end{verbatim}
 
 
-It uses the standard 'each' call on a 'from' and 'too' number to call
-a quotation on each number between 'from' and 'too' inclusive. The
+It uses the standard `each' call on a `from' and `too' number to call
+a quotation on each number between `from' and `too' inclusive. The
 quotation called is the partial continuation provided by
-'bshift'. This can be used in code like:
+`bshift'. This can be used in code like:
 
 \begin{verbatim}
 [ 1 5 range . ] breset drop
@@ -84,8 +84,8 @@ quotation called is the partial continuation provided by
 
 
 For each item in the range it executed the partial continuation which
-is 'X .', printing that item in the range. So given a function that
-knows nothing about the special capability of 'range' can still work
+is `X .', printing that item in the range. So given a function that
+knows nothing about the special capability of `range' can still work
 with it. The following prints the first five factorials:
 
 \begin{verbatim}
@@ -119,12 +119,12 @@ The first change was to ensure that items on the stack are accessable
 
 
 Recall that the quotation passed to breset has stack effect ( r -- v
-). Once the 'r' is dropped the '*' should be expected to operate on
-the '2' and the '20'. The '20' is accessable as if it was directly
-under the 'r' on the stack from within the quotation.
+). Once the `r' is dropped the `*' should be expected to operate on
+the `2' and the `20'. The `20' is accessable as if it was directly
+under the `r' on the stack from within the quotation.
 
 In a prior implementation of breset I called the quotation using
-'call' after creating a 'dup' of the 'r':
+`call' after creating a `dup' of the `r':
 
 
 \begin{verbatim}
@@ -135,7 +135,7 @@ In a prior implementation of breset I called the quotation using
 
 
 The problem with this is that from within the quotation there is an
- extra 'r' above items on the stack before the quotation is called:
+ extra `r' above items on the stack before the quotation is called:
 
 \begin{verbatim}
 20 [ drop 2 * ] breset
@@ -143,7 +143,7 @@ The problem with this is that from within the quotation there is an
 
 
 The stack on entry to the quotation here is ( 20 r r -- ). Changing
-the breset implementation to use 'keep' instead of call fixes this
+the breset implementation to use `keep' instead of call fixes this
 problem:
 
 
@@ -154,19 +154,19 @@ problem:
 \end{verbatim}
 
 
-Notice also that the return item from the quotation, 'v', is now below
-the 'r' and I didn't need to 'dup' it. In general, usage of words like
-'keep' will enable combinators to more intuitively access stack items
+Notice also that the return item from the quotation, `v', is now below
+the `r' and I didn't need to `dup' it. In general, usage of words like
+`keep' will enable combinators to more intuitively access stack items
 from outside the quotation.
 
 Another way of solving this problem is to use the return stack words
-'>r' and 'r>' to move items temporarily off the stack so that the
+`>r' and `r>' to move items temporarily off the stack so that the
 quotation being called is imediately above the relevant stack items
 supplied by the caller.
 
-The second major change was to remove the use of 'with-scope' and
+The second major change was to remove the use of `with-scope' and
 namespaces to store the continuation delimiter. I previously stored
-this in a 'mark' and 'mark-old' variable. Now the implementations of
+this in a `mark' and `mark-old' variable. Now the implementations of
 breset and bshift manage these on the stack.
 
 Storing variables in namespaces is seductive. It enables you to avoid
@@ -187,8 +187,8 @@ myvar get .
 
 
 As expected setting the myvar variable in the quotation passed to
- 'keep' results in the global myvar value being set to 10. But if this
- is run inside a 'with-scope' you get caught by the fact that a new
+ `keep' results in the global myvar value being set to 10. But if this
+ is run inside a `with-scope' you get caught by the fact that a new
  namespace is at the top of the stack:
 
 
@@ -202,8 +202,8 @@ myvar get .
 
 Notice the value is still 10. This is because the variable is set in
 the new namespace which is dropped off the namespace stack when the
-'with-scope' exits. Normally you would be aware of this when you write
-code, but if you use a combinator that uses 'with-scope' in its
+`with-scope' exits. Normally you would be aware of this when you write
+code, but if you use a combinator that uses `with-scope' in its
 implementation, and it then calls your quotation from within that
 scope then all your variable sets will be lost at the end of the
 combinator call.
@@ -213,9 +213,9 @@ but for many cases it's not the desired behaviour. So as a general
 rule I try to avoid using variables and with-scope in combinator
 implementations.
 
-There was also a minor bug in my 'range' example in that it didn't
+There was also a minor bug in my `range' example in that it didn't
 give the correct range if the starting number was anything but
-'1'. The corrected 'range' implementation is:
+`1'. The corrected `range' implementation is:
 
 
 \begin{verbatim}
@@ -226,10 +226,10 @@ give the correct range if the starting number was anything but
 \end{verbatim}
 
 
-Note the '2nip' at the end. 'bshift' and 'breset' operate like other
+Note the `2nip' at the end. `bshift' and `breset' operate like other
 continuation combinators in that they restore the stack to what they
-were before they were called. In this case the 'from' and 'to' were on
-the stack and we need to 'nip' them off. Simple usage works as before:
+were before they were called. In this case the `from' and `to' were on
+the stack and we need to `nip' them off. Simple usage works as before:
 
 
 \begin{verbatim}
@@ -259,17 +259,17 @@ Nested usage works correctly now:
 \end{verbatim}
 
 
-It can be hard to reason about what usage of words like 'range'
-does. Think of it as returning a single value 'n', and calling the
-breset multiple times with the value of 'n' for each 'n' in the
-range. So you'll see that after the first 'range' call I 'swap' to
+It can be hard to reason about what usage of words like `range'
+does. Think of it as returning a single value `n', and calling the
+breset multiple times with the value of `n' for each `n' in the
+range. So you'll see that after the first `range' call I `swap' to
 swap the result of the range and get the continuation mark passed to
-breset back to the top of the stack to call the second 'range'.
+breset back to the top of the stack to call the second `range'.
 
 You'll notice that the result of calling these snippets always returns
-'f' on the stack. This is because the range implementation leaves 'f'
+`f' on the stack. This is because the range implementation leaves `f'
 on the stack at the end of the bshift quotation. This results in
-'breset' exiting with that value.
+`breset' exiting with that value.
 
 A question was raised on the Factor mailing list about CLU-style
 iterators. An example of the usage from one of the links in that

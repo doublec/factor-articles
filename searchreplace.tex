@@ -7,7 +7,7 @@ The Parsing Expression Grammar library has code to allow search and replace usin
 \ordinaryword{search}{search ( string parser -- seq )}
 }
 
-The 'search' word takes a string and a parser off the stack. It returns a sequence of all substrings in the original string that were successfully parsed by the parser. The result returned in the sequence is the AST produced by the parser. For example:
+The `search' word takes a string and a parser off the stack. It returns a sequence of all substrings in the original string that were successfully parsed by the parser. The result returned in the sequence is the AST produced by the parser. For example:
 
 \begin{verbatim}
 : bold ( -- parser )
@@ -32,7 +32,7 @@ The 'search' word takes a string and a parser off the stack. It returns a sequen
 \ordinaryword{replace}{replace ( string parser -- result )}
 }
 
-The 'replace' word takes a string and parser off the stack. It returns the original string with all substrings that successfully parse by the parser replaced by the result of that parser.
+The `replace' word takes a string and parser off the stack. It returns the original string with all substrings that successfully parse by the parser replaced by the result of that parser.
 
 \begin{verbatim}
 "Hello *World*" bold [ 

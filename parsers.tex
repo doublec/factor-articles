@@ -37,12 +37,12 @@ USE: parser-combinators
 USE: lazy-lists
 \end{verbatim}
 
-A parser combinator is a tuple that has specialised the 'parse'
+A parser combinator is a tuple that has specialised the `parse'
  generic word. This word has stack effect ( input parser -- result
  ). The input is a sequence of tokens (usually a string) and the
  result is what is known as a lazy list of successes.
 
-A 'list of sucesses' is a list of all possible sucessful parse
+A `list of sucesses' is a list of all possible sucessful parse
  results. It being lazy, each result in the list is not computed
  (ie. the parse is not done) until that list element is
  requested. This is how parser combinators handle backtracking. If the
@@ -51,11 +51,11 @@ A 'list of sucesses' is a list of all possible sucessful parse
 
 Parsers can be written manually or existing parsers can be combined
  together using combinators. A number of existing parsers and
- combinators are provided in the 'parser-combinators' vocabulary to
+ combinators are provided in the `parser-combinators' vocabulary to
  build simple parsers.
 
-To start with the s-expression parser we can handle the '(' and ')'
- using the 'token' word. This word returns a parser that parses only
+To start with the s-expression parser we can handle the `(' and `)'
+ using the `token' word. This word returns a parser that parses only
  the given string:
 
 \begin{verbatim}
@@ -66,7 +66,7 @@ LAZY: 'rparens' ( -- parser )
   ")" token ;
 \end{verbatim}
 
-Notice these are defined with the 'LAZY:' word instead of ':'. This
+Notice these are defined with the `LAZY:' word instead of `:'. This
 means the result of the word is a promise and needs to be forced to
 get the actual value. Although not strictly necessary with these
 simple parsers it is required for those that recursively call
@@ -77,12 +77,12 @@ usage:
 "(" 'lparens' parse car . => T{ parse-result f "(" T{ slice f "(" 1 1 } }
 \end{verbatim}
 
-The result of the parse is a lazy list. Returning the 'car' of that
-list shows the first parse result. The 'parse-result' tuple has two
+The result of the parse is a lazy list. Returning the `car' of that
+list shows the first parse result. The `parse-result' tuple has two
 slots. The first slot is the parse tree returned by the parser. The
 second is the rest of the input string remaining to be parsed if
 any. Usually the latter is a slice for efficiency purposes. The
-parsers created with 'token' return the token itself as the parse
+parsers created with `token' return the token itself as the parse
 tree.
 
 The s-expression parser needs to parse numbers and
@@ -94,28 +94,28 @@ LAZY: 'digit' ( -- parser )
   [ digit? ] satisfy ;
 \end{verbatim}
 
-This uses the 'satisfy' parser generator word. Where 'token' parses an
-input string for a specified string, 'satisfy' will call a given
+This uses the `satisfy' parser generator word. Where `token' parses an
+input string for a specified string, `satisfy' will call a given
 quotation with the first character of the input string. If the
-quotation returns 'true' then the parse is succesful otherwise it
-fails. Examples of using this definition of 'digit' are:
+quotation returns `true' then the parse is succesful otherwise it
+fails. Examples of using this definition of `digit' are:
 
 \begin{verbatim}
 "123" 'digit' parse car parse-result-parsed . => 49
 \end{verbatim}
 
-The 'parse-result-parsed' word returns just the parse tree of the
-result from the 'parse-result' tuple. The result, '49', is the
+The `parse-result-parsed' word returns just the parse tree of the
+result from the `parse-result' tuple. The result, `49', is the
 character code of the successfully parsed digit. Ideally I want the
 actual number returned rather than the character code.
 
-The '$<$@' word applies a transformation to the parse tree of a
+The `$<$@' word applies a transformation to the parse tree of a
 parser. It converts an existing parser to one that does what the
-original parser did but has the transformation applied. '$<$@' takes a
+original parser did but has the transformation applied. `$<$@' takes a
 quotation on the stack with stack effect ( old-tree -- new-tree
 ). This quotation is called to perform the transformation. One way to
-remember the effect of '$<$@' is to note that '$<$' sign points to the
-parser being transformed. Here is 'digit' converted to return a
+remember the effect of `$<$@' is to note that `$<$' sign points to the
+parser being transformed. Here is `digit' converted to return a
 number:
 
 \begin{verbatim}
@@ -125,11 +125,11 @@ LAZY: 'digit' ( -- parser )
 "123" 'digit' parse car parse-result-parsed . => 1
 \end{verbatim}
 
-'digit$>$' is a standard Factor word that coverts the character code of
+`digit$>$' is a standard Factor word that coverts the character code of
 a digit into the digit itself. A number is one or more digits in a
 row. The $<$+$>$ word takes a parser as input and returns a parser that
 parses one or more instances of the original. It has the same meaning
-as '+' in regular expressions. This allows a 'number' parser word to
+as `+' in regular expressions. This allows a `number' parser word to
 be written as:
 
 \begin{verbatim}
@@ -141,8 +141,8 @@ LAZY: 'number' ( -- parser )
 
 Notice here that the result is an array of the digits in the
 number. This is the parse tree that $<$+$>$ generates - an array of the
-results of the original parser. By using '$<$@' this can be converted
-into a numeric value using Factor's 'reduce' word (basically a left
+results of the original parser. By using `$<$@' this can be converted
+into a numeric value using Factor's `reduce' word (basically a left
 fold):
 
 \begin{verbatim}
@@ -152,7 +152,7 @@ LAZY: 'number' ( -- parser )
 "123" 'number' parse car parse-result-parsed . => 123
 \end{verbatim}
 
-Interestingly 'number' actually returns more than one parse result
+Interestingly `number' actually returns more than one parse result
 since "123" contains more than one occurrence of digits in a sequence:
 
 \begin{verbatim}
@@ -167,7 +167,7 @@ the list is lazy if we don't request anything beyond the first match
 then the remaining parse results aren't actually computed.
 
 Next on the list is identifiers. These are any sequences of characters
-that are not numbers, spaces, or parenthesis. The 'satisfy' word can
+that are not numbers, spaces, or parenthesis. The `satisfy' word can
 be used for this, combined with $<$+$>$:
 
 \begin{verbatim}
@@ -183,12 +183,12 @@ LAZY: 'identifier' ( -- parser )
 "foo" 'identifier' parse car parse-result-parsed . => "foo"
 \end{verbatim}
 
-The '$<$@' word is used to transform the result into a string otherwise
+The `$<$@' word is used to transform the result into a string otherwise
 we'd get an array of the character codes in the identifier as a
 result.
 
 Often it is desired to parse either a number or an identifier. The
-'atom' word does this:
+`atom' word does this:
 
 \begin{verbatim}
 LAZY: 'atom' ( -- parser )
@@ -198,13 +198,13 @@ LAZY: 'atom' ( -- parser )
 "foo" 'atom' parse car parse-result-parsed . => "foo"
 \end{verbatim}
 
-It uses '$<|>$', known as the choice word. It takes two parsers on the
+It uses `$<|>$', known as the choice word. It takes two parsers on the
 stack, and generates a parser which when run will try the first parser
 on the input string. If it fails it will then try the second
 parser. It returns the list of successes resulting from both parses.
 
-A first cut at parsing a single expression like '(set a 10)' requires
-a sequencing parser combinator. This is '$<$\&$>$'. It takes two parsers
+A first cut at parsing a single expression like `(set a 10)' requires
+a sequencing parser combinator. This is `$<$\&$>$'. It takes two parsers
 and returns a resulting parser which when run will run the first
 parser on the input string, and then run the second parser on the
 remaining unparsed portion of the input string of each result from the
@@ -220,12 +220,12 @@ LAZY: 'expr1' ( -- parser )
   { { "(" 123 } ")" }
 \end{verbatim}
 
-This results in a very ugly parse tree. The '$<$\&$>$' word returns a parse
+This results in a very ugly parse tree. The `$<$\&$>$' word returns a parse
 tree which is an array of the two parsers it uses. Since we have two
-'$<$\&$>$' calls we get nested results. This can be fixed using two
-variants of '$<$\&$>$'. They are '$<$\&' and '\&$>$'. These words do the same as
-'$<$\&$>$' but don't put the result of one of the parsers in the parse
-tree. The '$>$' or '$<$' point to the parser that will have the result
+`$<$\&$>$' calls we get nested results. This can be fixed using two
+variants of `$<$\&$>$'. They are `$<$\&' and `\&$>$'. These words do the same as
+`$<$\&$>$' but don't put the result of one of the parsers in the parse
+tree. The `$>$' or `$<$' point to the parser that will have the result
 returned. Here's a new version that has a nicer parse tree using these
 words:
 
@@ -238,15 +238,15 @@ LAZY: 'expr2' ( -- parser )
 "(123)" 'expr2' parse car parse-result-parsed . => 123
 \end{verbatim}
 
-Notice the variants of '$<$\&$>$' used both select the result of the 'atom'
+Notice the variants of `$<$\&$>$' used both select the result of the `atom'
 parser to be included in the parse tree and not the results of the
 parenthesis parsers.
 
 There is still a problem with the expression parser. It doesn't handle
-more than one 'atom' in the expression. Similar to '$<$+$>$' there is
-'$<$*$>$' which takes a parser and returns a new parser which when called
+more than one `atom' in the expression. Similar to `$<$+$>$' there is
+`$<$*$>$' which takes a parser and returns a new parser which when called
 parses zero or more instances of the original parser. The parse tree
-for the result of '$<$*$>$' is an array of the results of the original
+for the result of `$<$*$>$' is an array of the results of the original
 parser:
 
 \begin{verbatim}
@@ -260,13 +260,13 @@ LAZY: 'expr3' ( -- parser )
 \end{verbatim}
 
 This has one other change in that it needs to handle white space
-between atoms. The 'sp' word takes a parser (in this case 'atom') and
+between atoms. The `sp' word takes a parser (in this case `atom') and
 returns a parser that first removes all white space from the start of
 the input string and then calls the original parser. The effect is to
 produce a parser that ignores white space.
 
 This gets close to what out test case requires but it returns an array
- not a quotation. Using '$<$@' fixes this:
+ not a quotation. Using `$<$@' fixes this:
 
 \begin{verbatim}
 LAZY: 'expr4' ( -- parser )
@@ -279,8 +279,8 @@ LAZY: 'expr4' ( -- parser )
 \end{verbatim}
 
 Unfortunately this fails on our second test case which requires
-handling nested expressions like '(+ 1 (+ 2 3) 4)'. By recursively
-calling the 'expr' word this is easy to add:
+handling nested expressions like `(+ 1 (+ 2 3) 4)'. By recursively
+calling the `expr' word this is easy to add:
 
 \begin{verbatim}
 LAZY: 'expr5' ( -- parser )
@@ -292,11 +292,11 @@ LAZY: 'expr5' ( -- parser )
   [ "+" 10 [ "+" 20 30 ] ]
 \end{verbatim}
 
-This change was as simple as replacing the 'atom' parser used between
+This change was as simple as replacing the `atom' parser used between
 the two parenthesis with a parser which checks for an atom or an
 expression. Note that this recursively calls itself, which is safe
 from infinite recursion due to the lazy evaluation. It doesn't
-actually get evaluated unless the 'atom' test fails first. One final
+actually get evaluated unless the `atom' test fails first. One final
 change is to allow for only atoms as well as expressions and then our
 simple test cases work and it is completed:
 

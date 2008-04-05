@@ -30,7 +30,7 @@ USING: concurrency channels channels.remote ;
 
 Remote channels are implemented using
 distributed concurrency so you must start a node on the Factor
-instance you are using. This is done with 'start-node' giving the
+instance you are using. This is done with `start-node' giving the
 hostname and port:
 
 \wordtable{
@@ -52,7 +52,7 @@ From a remote node you can create a \texttt{<remote-channel>} which contains
 the hostname and port of the node containing the channel, and the identifer
 of that channel.
 
-You can use 'from' and 'to' on the remote channel exactly as you can
+You can use `from' and `to' on the remote channel exactly as you can
 on normal channels. The data is marshalled over the network using the
 serialization library.  
 
@@ -82,7 +82,7 @@ publish localnode swap <remote-channel>
 "counter.ser" <file-writer> [ serialize ] with-stream
 \end{verbatim}
 
-This creats a channel that returns incrementing integer numbers, as per our previous examples. A \texttt{<remote-channel>} is created with the published identifier for this channel and our node address. This is serialized to a file called ``counter.ser''. A remote node can deserialize this file and use it to access the channel immediately. In factor instance 2:
+This creates a channel that returns incrementing integer numbers, as per our previous examples. A \texttt{<remote-channel>} is created with the published identifier for this channel and our node address. This is serialized to a file called ``counter.ser''. A remote node can deserialize this file and use it to access the channel immediately. In factor instance 2:
 
 \begin{verbatim}
 USING: concurrency 

@@ -5,7 +5,7 @@ their GUI representation (called Gadgets). It's like a lightweight
 functional reactive programming system. 
 
 \section{Models}
-To have a gadget dynamically updated it must reference a 'model' which
+To have a gadget dynamically updated it must reference a `model' which
 wraps the value to be displayed. Whenever the data wrapped by the
 model is changed, a sequence of connected objects are notified of the
 change.  
@@ -68,7 +68,7 @@ Here we create a model containing the text ``hello''. A label-control gadget is 
 
 \section{Updating time example}
 
-In this example I create a global value called 'time' that holds a
+In this example I create a global value called `time' that holds a
 model wrapping the current date and time:
 
 \begin{verbatim}
@@ -96,7 +96,7 @@ The \verb|update-time| words gets the current date and time (using \verb|now|)
 and sets the model's value to it. An alarm is added to do this every second.
 
 We can confirm that this value is updating by getting the value of
-the 'time' variable and see that it changes between calls:
+the `time' variable and see that it changes between calls:
 
 \begin{alltt}
 USE: calendar.format

@@ -2,7 +2,7 @@
 
 Given a Factor sequence or primitive type you can pattern match and
 create bindings to symbols with a special format. Any symbol that
-begins with a '?' character is used as a pattern match variable, and
+begins with a `?' character is used as a pattern match variable, and
 binds to the value in a matching sequence. Here's a simple example:
 
 \wordtable{
@@ -35,7 +35,7 @@ variables then they must match exactly:
 
 
 The second example doesn't match as the first element in both
-sequences is not the vaue '2'.
+sequences is not the value `2'.
 
 Matching works recursively too:
 
@@ -61,7 +61,7 @@ retrieval of the pattern match variables.
 }
 
 It sounds complex but is actually very easy in practice. Here what an
-example 'counter' process might look like using \verb|match-cond|:
+example `counter' process might look like using \verb|match-cond|:
 
 \begin{verbatim}
 USING: match concurrency.messaging ;

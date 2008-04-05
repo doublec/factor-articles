@@ -3,7 +3,7 @@
 \section{How to publish a git repository}
 
 To set up a repository on a server you should clone the existing
-Factor repository using the '--bare' option:
+Factor repository using the `--bare' option:
 
 \begin{verbatim}
 git clone --bare http://www.factorcode.org/git/factor.git factor.git
@@ -15,8 +15,8 @@ never push into a repository that contains changes in the working
 copy. To ensure this doesn't happen, we're making the server
 repository a bare repository - it has no working copy.
 
-Copy the 'factor.git' directory onto your server. I put it in
-'/git/factor.git'. Now if you have changes on your local machine that
+Copy the `factor.git' directory onto your server. I put it in
+`/git/factor.git'. Now if you have changes on your local machine that
 you want to push to your repository you can use something like:
 
 \begin{verbatim}
@@ -35,7 +35,7 @@ via the HTTP protocol, or via the git protocol. The first is slower
 but usable by people behind restrictive firewalls, while the second is
 more efficient but requires an open port. I suggest doing both.
 
-To publish via HTTP, you must make the file 'hooks/post-update'
+To publish via HTTP, you must make the file `hooks/post-update'
 executable:
 
 \begin{verbatim}
@@ -43,7 +43,7 @@ chmod +x /git/factor.git/hooks/post-update
 \end{verbatim}
 
 This gets executed whenever something is pushed to the repository. It
-runs a command 'git-update-server-info' which updates some files that
+runs a command `git-update-server-info' which updates some files that
 makes the HTTP retrieval work. You should also run this once manually:
 
 \begin{verbatim}
@@ -59,10 +59,10 @@ repository with:
 git pull http://yourserver.com/git/factor.git
 \end{verbatim}
 
-To set up the git protocol you need to run the 'git-daemon'
+To set up the git protocol you need to run the `git-daemon'
 command. You pass it a directory which is the root of your git
 repositories. It will make public all git repositories underneath that
-root that have the file 'git-daemon-export-ok' in it. So first create
+root that have the file `git-daemon-export-ok' in it. So first create
 this file:
 
 \begin{verbatim}
@@ -75,7 +75,7 @@ Run the daemon with:
 git-daemon --verbose /git
 \end{verbatim}
 
-The '--verbose' will give you output showing the results of connecting
+The `--verbose' will give you output showing the results of connecting
 to it. I run this from within a screen session. You can set it up to
 automatically run using whatever features your server OS has. Now
 people can retrieve via the git protocol:
@@ -138,7 +138,7 @@ git commit -a -m "Fix merge conflict in test.foo"
 \section{Cherry Picking}
 
 The cherry picking of patches works differently to Darcs. There are a
-couple of ways of handling this, but I use 'git cherry-pick'. If you
+couple of ways of handling this, but I use `git cherry-pick'. If you
 have a number of contributers with their own repositories that you
 regularly pull from you can set up remote tracking branches:
 
@@ -170,9 +170,9 @@ git merge john/master
 \end{verbatim}
 
 If you want one commit, but not its dependencies then this is where
-'cherry-pick' is used.
+`cherry-pick' is used.
 
-Given a commit id, 'cherry-pick' will take the patch for that commit
+Given a commit id, `cherry-pick' will take the patch for that commit
 and apply it to your current branch. It's used like:
 
 \begin{verbatim}

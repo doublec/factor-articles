@@ -2,12 +2,12 @@
 
 \section{Overview}
 
-The 'cont-responder' library is a continuation based web server
-for writing web applications in Factor. Each 'web application' is a
+The `cont-responder' library is a continuation based web server
+for writing web applications in Factor. Each `web application' is a
 standard Factor httpd responder.
 
 This document outlines how to write simple web applications using
-'cont-responder' by showing examples. It does not attempt to go into
+`cont-responder' by showing examples. It does not attempt to go into
 the technical details of continuation based web applications or how it
 is implemented in Factor. Instead it uses a series of examples that
 can be immediately tried at the Factor prompt to get a feel for how
@@ -15,7 +15,7 @@ things work.
 
 \section{Getting Started}
 
-To get started you will first need to use the 'cont-responder'
+To get started you will first need to use the `cont-responder'
 vocabulary:
 
 \begin{verbatim}
@@ -36,33 +36,33 @@ following is a simple function to start the server on port 8888:
 
 \section{Responders}
 
-A 'responder' is a word that is registered with the httpd server that
+A `responder' is a word that is registered with the httpd server that
 gets run when the client accesses a particular URL. When run that word
-has 'standard output' bound in such a way that all output goes to the
+has `standard output' bound in such a way that all output goes to the
 clients web browser. 
 
-In the 'cont-responder' system there are two words used to set output
-to go to the web browser and display a page. They are 'show' and
-'show-final'. Think of them as 'show a page to the client'. 'show' and
-'show-final' both take a single item on the stack and that is a 'page
+In the `cont-responder' system there are two words used to set output
+to go to the web browser and display a page. They are `show' and
+`show-final'. Think of them as `show a page to the client'. `show' and
+`show-final' both take a single item on the stack and that is a `page
 generation' quotation.
 
-A 'page generation' quotation is a quotation which when called will
+A `page generation' quotation is a quotation which when called will
 output HTML to stdout. In the httpd system, stdout is bound to the
 socket connection to the clients web browser. 
 
-The 'page generation' quotation passed to 'show' should have stack
-effect ( string -- ) while that for 'show-final' has stack effect 
+The `page generation' quotation passed to `show' should have stack
+effect ( string -- ) while that for `show-final' has stack effect 
 ( -- ). The two words have very similar uses. 
 
-The big difference is with 'show'. It provides an URL to the page
+The big difference is with `show'. It provides an URL to the page
 generation quotation that when requested will proceed with execution
-immediately following the 'show', and any POST request data will be on
-the stack. With 'show-final' no URL is passed so it is not possible to
-'resume' computation. This is explained more fully later.
+immediately following the `show', and any POST request data will be on
+the stack. With `show-final' no URL is passed so it is not possible to
+`resume' computation. This is explained more fully later.
 
 \section{Hello World 1}
-A simple 'hello world' responder would be:
+A simple `hello world' responder would be:
 
 \begin{verbatim}
   : hello-world1 ( -- )
@@ -73,7 +73,7 @@ A simple 'hello world' responder would be:
 \end{verbatim}
 
 When installed this will show a single page which is simple HTML to
-display 'Hello World!'. 
+display `Hello World!`. 
 
 The responder is installed using:
 
@@ -81,11 +81,11 @@ The responder is installed using:
   "helloworld1" [ hello-world1 ] install-cont-responder
 \end{verbatim}
 
-The 'install-cont-responder' word has stack effect 
+The `install-cont-responder' word has stack effect 
 ( name quot -- ). It installs a responder with the given name. 
 
-When the URL for that responder is accessed the 'quot' quotation is
-run. In this case it is 'hello-world1' which displays the single HTML
+When the URL for that responder is accessed the `quot' quotation is
+run. In this case it is `hello-world1' which displays the single HTML
 page described previously.
 
 Accessing the above responder from a web browser is via an URL like:
@@ -94,7 +94,7 @@ Accessing the above responder from a web browser is via an URL like:
   http://localhost:8888/responder/helloworld1
 \end{verbatim}
 
-This should display an HTML page showing 'Hello World!".
+This should display an HTML page showing ``Hello World!''.
 
 \section{HTML Generation}
 
@@ -102,12 +102,12 @@ Generating HTML by writing strings containing HTML can be a bit of a
 chore. Especially when the content is dynamic requiring concatenation
 of many pieces of data. 
 
-The 'cont-responder' system uses 'html', a library that allows writing
+The `cont-responder' system uses `html', a library that allows writing
 HTML looking output directly in factor. This system, developed for
-'cont-responder', has recently been made part of the standard 'html'
+`cont-responder', has recently been made part of the standard `html'
 library of Factor.
 
-'html' basically allows you to write HTML-like output in a factor word
+`html' basically allows you to write HTML-like output in a factor word
 and it will be output as correct HTML. It can be tested at the console
 very easily:
 
@@ -128,8 +128,8 @@ specified tags. Attributes can also be used:
 
 The attribute must be seperated from the value of that attribute via
 whitespace. If you are using attributes the tag must be closed with a
-'[tagname]>' where the [tagname] is the name of the tag used. See the
-'$<$p p$>$' example above.
+`[tagname]$>$' where the [tagname] is the name of the tag used. See the
+`$<$p p$>$' example above.
 
 You can use any factor code at any point:
  
@@ -175,9 +175,9 @@ Install it using:
 \section{Dynamic Data}
 
 Adding dynamic data to the page is relatively easy. This example pulls
-information from the 'room' word which returns memory details about
-the running Factor system. It also uses 'room.' which outputs these
-details to standard output and this is wrapped in a <pre> tag so it is
+information from the `room' word which returns memory details about
+the running Factor system. It also uses `room.' which outputs these
+details to standard output and this is wrapped in a $<$pre$>$ tag so it is
 formatted correctly.
 
 \begin{verbatim}
@@ -253,17 +253,17 @@ This example demonstates a flow of three pages. Clicking an URL on the
 first page displays the second. Clicking an URL on the second displays
 the third.
 
-When a 'show' call is executed the page generated by the quotation is
+When a `show' call is executed the page generated by the quotation is
 sent to the client. The computation of the responder is then
-'suspended'. When the client accesses a special URL, computation is
-resumed at the point of the end of the 'show' call. In this way
+`suspended'. When the client accesses a special URL, computation is
+resumed at the point of the end of the `show' call. In this way
 procedural flow is maintained.
 
-This brings us to the 'URL' stack item that is available to the 'page
-generation' quotation passed to 'show'. This URL is a string that
+This brings us to the `URL' stack item that is available to the `page
+generation' quotation passed to `show'. This URL is a string that
 contains an URL that can be embedded in the page. When the user access
 that URL, computation is resumed from the point of the end of the
-'show' call as described above:
+`show' call as described above:
 
 \begin{verbatim}
   : flow-example1 ( -- )
@@ -297,13 +297,13 @@ that URL, computation is resumed from the point of the end of the
   "flowexample1" [ flow-example1 ] install-cont-responder
 \end{verbatim}
 
-The 'flow-example1' word contains two 'show' calls in a row, followed
-by a 'show-final'. The 'show' calls display simple pages with an anchor
+The `flow-example1' word contains two `show' calls in a row, followed
+by a `show-final'. The `show' calls display simple pages with an anchor
 link to the URL received on the stack. This URL when accessed resumes
 the computation. The final page doesn't require resumption of the
-computation so 'show-final' is used. We could have used 'show' and
+computation so `show-final' is used. We could have used `show' and
 dropped the URL passed to the quotation and the result following the
-'show' but using 'show-final' is more efficient.
+`show' but using `show-final' is more efficient.
 
 When you display this example in the browser you'll be able to click
 the URL to navigate. You can use the back button to retry the URL's,
@@ -340,30 +340,30 @@ this into a seperate word:
   "flowexample2" [ 5 flow-example2 ] install-cont-responder
 \end{verbatim}
 
-In this example the 'show-flow-page' pulls the page number off the
+In this example the `show-flow-page' pulls the page number off the
 stack. It also gets whether or not to display the link to the next
 page.
 
-Notice that after the show that a '3drop' is done whereas
-previously we've only done a single 'drop'. This is due to a side
-effect of 'show' using continuations. 
+Notice that after the show that a `3drop' is done whereas
+previously we've only done a single `drop'. This is due to a side
+effect of `show' using continuations. 
 
-After the 'show' call returns there will be one item on the stack
+After the `show' call returns there will be one item on the stack
 (which we've been dropping and will explain later what it is). The
 stack will also be set as it was before the show call. So in this case
-the 'n' and 'bool' remain on the stack even though they were removed
+the `n' and `bool' remain on the stack even though they were removed
 during the page generation quotation. This is because we resumed the
 continuation which, when captured, had those items on the stack. The
 general rule of thumb is you will need to account for items on the
 stack before the show call.
 
-This example also demonstrates using the 'repeat' combinator to
+This example also demonstrates using the `repeat' combinator to
 sequence the page shows. Any Factor code can be called and the
 continuation based system will sequentially display each page. The
 back button, browser window cloning, etc will all continue to work.
 
-You'll notice the URL's in the browser have an 'id' query parameter
-with a sequence of characters as its value. This is the 'continuation
+You'll notice the URL's in the browser have an `id' query parameter
+with a sequence of characters as its value. This is the `continuation
 identifier' which is like a session id except that it identifies not
 just the data you have stored but your location within the responder
 as well.
@@ -371,15 +371,15 @@ as well.
 \section{Forms and POST data}
 
 The web pages we've generated so far don't accept input from the
-user. I've mentioned previously that 'show' returns a value on the
+user. I've mentioned previously that `show' returns a value on the
 stack and we've been dropping it in our examples. 
 
 The value returned is a namespace containing the field names and
 values of any POST data in the request. If no POST data exists then it
-is the boolean value 'f'. 
+is the boolean value `f'. 
 
 To process input from the user just put a form in the HTML with a
-method of 'POST' and an action set to the URL passed in to the page
+method of `POST' and an action set to the URL passed in to the page
 generation quotation. The show call will then return a namespace
 containing this data. Here is a simple example:
 
@@ -417,17 +417,17 @@ containing this data. Here is a simple example:
   "post-example1" [ post-example1 ] install-cont-responder
 \end{verbatim}
     
-The 'accept-users-name' word displays an HTML form allowing input of
+The `accept-users-name' word displays an HTML form allowing input of
 the name. When that form is submitted the namespace containing the
-data is returned by 'show'. We bind to it and retrieve the 'username'
+data is returned by `show'. We bind to it and retrieve the `username'
 field. The name used here should be the same name used when creating
 the field in the HTML.
 
-'post-example1' then does something a bit tricky. Instead of first
-calling 'accept-users-name' to push the name on the stack and then
-displaying the resulting page we call 'accept-users-name' from within
+`post-example1' then does something a bit tricky. Instead of first
+calling `accept-users-name' to push the name on the stack and then
+displaying the resulting page we call `accept-users-name' from within
 the page itself when we actually need it. The magic of the
-continuation system causes the 'accept-users-name' to be called when
+continuation system causes the `accept-users-name' to be called when
 needed displaying that page first. It is certainly possible to do it
 the other way though:
 
@@ -452,12 +452,12 @@ A web page can contain URL's that when clicked perform some
 action. This may be to display other pages, or to affect some server
 state. 
 
-The 'cont-responder' system enables an URL to be associated with any
+The `cont-responder' system enables an URL to be associated with any
 Factor quotation. This quotation will be run when the URL is
 clicked. When that quotation exits control is returned to the page
 that contained the call. 
 
-The word that enables this is 'quot-href'. It takes two items on the
+The word that enables this is `quot-href'. It takes two items on the
 stack. One is the text to display for the link. The other is the
 quotation to run when the link is clicked. This quotation should have
 stack effect ( -- ).
@@ -489,14 +489,14 @@ decremented.
 \end{verbatim}
 
 Accessing this example from the web browser will display a count of
-zero. Clicking '++' or '--' will increment or decrement the count
+zero. Clicking `++` or `--` will increment or decrement the count
 respectively. This is done by calling a quotation that either
 increments or decrements the count when the URL's are clicked. 
 
-Because the count is 'global' in this example, if you clone the
+Because the count is `global' in this example, if you clone the
 browser window with the count set to a specific value and increment
 it, and then refresh the original browser window you will see the most
-recent incremented state. This gives you 'shopping cart' like state
+recent incremented state. This gives you `shopping cart' like state
 whereby using the back button or cloning windows shows a view of a
 single global value that can be modified by all browser
 instances. ie. The state is not backtracked when the back button is
@@ -506,20 +506,20 @@ You'll notice that when you visit the root URL for the responder that
 the count is reset back to zero. This is because when the responder
 was installed the value of zero was in the namespace stack. This stack
 is copied when the responder is installed resulting in initial
-accesses to the URL having the starting value. This gives you 'server
+accesses to the URL having the starting value. This gives you `server
 side session data' for free.
 
 \section{Local State}
 
-You can also have a counter value with 'local' state. That is, cloning
+You can also have a counter value with `local' state. That is, cloning
 the browser window will give you a new independant state value that
 can be incremented. Going to the original browser window and
 refreshing will show the original value which can be incremented or
 decremented seperately from that value in the cloned window. With this
-type of state, using the back button results in 'backtracking' the
+type of state, using the back button results in `backtracking' the
 state value.
 
-A way to get 'local' state is to store values on the stack itself
+A way to get `local' state is to store values on the stack itself
 rather than a namespace:
 
 \begin{verbatim}
@@ -543,7 +543,7 @@ rather than a namespace:
 
 This example works by taking the value of the counter and consing it
 to a code quotation that will increment or decrement it then call the
-responder again. So if the counter value is '5' the two 'quot-href'
+responder again. So if the counter value is `5' the two `quot-href'
 calls become the equivalent of:
 
 \begin{verbatim}
@@ -556,9 +556,9 @@ remembered for that page only. This means that each page has an
 independant count value. You can clone or use the back button and all
 browser windows have an independant value.
 
-\section{Calling 'Subroutines'}
+\section{Calling `Subroutines'}
 
-Being able to call other page display functions from 'quot-href' gives
+Being able to call other page display functions from `quot-href' gives
 you subroutine like functionality in your web pages. A simple menu
 that displays a sequence of pages and returns back to the main page is
 very easy:
@@ -614,11 +614,11 @@ correctly.
 
 Because the responders require some state associated with them to keep
 track of continuation id's and other things you can't usually just run
-them and expect them to work. The 'show' call for example will fail as
+them and expect them to work. The `show' call for example will fail as
 it expects some continuations to in the continuation table for that
 responder.
 
-The 'cont-testing.factor' file (in the contrib/cont-responder
+The `cont-testing.factor' file (in the contrib/cont-responder
 directory) contains some simple words that maintains this state for
 you in such a way that you can test the words from the console:
 
@@ -626,11 +626,11 @@ you in such a way that you can test the words from the console:
   "/contrib/cont-testing/load.factor" run-resource
 \end{verbatim}
 
-For this example we'll call the 'subroutine-example1' responder from
-above. First we need to put a 'testing state' object on the stack. All
+For this example we'll call the `subroutine-example1' responder from
+above. First we need to put a `testing state' object on the stack. All
 the testing functions expect this on the stack and return it after
 they have been called. We then put a quotation on the stack which
-calls the code we want to test and call the 'test-cont-function' word:
+calls the code we want to test and call the `test-cont-function' word:
 
 \begin{verbatim}
   <cont-test-state> [ subroutine-example1 ] test-cont-function
@@ -641,19 +641,19 @@ calls the code we want to test and call the 'test-cont-function' word:
   Content-Type: text/plain
 \end{verbatim}
 
-The first request is often a 'Document Moved' as above. This is
-because by default the 'cont-responder' system does the
-'Post-Refresh-Get' pattern which results in a redirect after each
+The first request is often a `Document Moved' as above. This is
+because by default the `cont-responder' system does the
+`Post-Refresh-Get' pattern which results in a redirect after each
 request. This can be disabled but we'll work through the example with
 it enabled.
 
-We can see the continuation id where we are 'moved' to in the
-'Location' header. To access this we use the 'test-cont-click'
+We can see the continuation id where we are `moved' to in the
+`Location' header. To access this we use the `test-cont-click'
 function. Think of this as manually clicking the
-URL. 'test-cont-click' has stack effect 
-( state url post -- state). 'post' is a hashtable of post data to pass 
-along with the request. We use 'f' here because we have no post
-data. Remember that our previous 'test-cont-function' call left the
+URL. `test-cont-click' has stack effect 
+( state url post -- state). `post' is a hashtable of post data to pass 
+along with the request. We use `f' here because we have no post
+data. Remember that our previous `test-cont-function' call left the
 state on the stack:
 
 \begin{verbatim}
@@ -672,10 +672,10 @@ state on the stack:
    </html>
 \end{verbatim}
 
-We can continue to drill down using 'test-cont-click' using the URL's
-above to see the HTML for each 'click'.
+We can continue to drill down using `test-cont-click' using the URL's
+above to see the HTML for each `click'.
 
-Here's an example using post data. We'll test the 'post-example1' word
+Here's an example using post data. We'll test the `post-example1' word
 written previously:
 
 \begin{verbatim}
@@ -707,7 +707,7 @@ Again we skip past the forward:
   </html>
 \end{verbatim}
 
-Now we submit the post data along to the 'action' url:
+Now we submit the post data along to the `action' url:
 
 \begin{verbatim}
   "5456539333180428" [ [[ "username" "Chris" ]] ] alist>hash test-cont-click
