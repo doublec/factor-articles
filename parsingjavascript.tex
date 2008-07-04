@@ -1,0 +1,219 @@
+\chapter{Parsing JavaScript}
+
+I've made some more changes to the Parsing Expression Grammar library
+in Factor. Most of the changes were inspired by things that OMeta can
+do. The grammar I used for testing is an OMeta-JS grammar for a subset
+of JavaScript. First the list of changes:
+
+\begin{itemize}
+\item Actions in the EBNF syntax receive an AST (Abstract Syntax Tree)
+  on the stack. The action quotation is expected to have stack effect
+  \texttt{( ast -- ast )}. It modifies the AST and leaves the new
+  version on the stack. This led to code that looks like this:
+\begin{verbatim}
+expr = lhs '+' rhs => [[ first3 nip + ]]
+\end{verbatim}
+
+      Nothing wrong with that, but a later change added variables to
+      the EBNF grammar to make it more readable:
+\begin{verbatim}
+      expr = lhs:x '+' rhs:y => [[ drop x y + ]]
+\end{verbatim}
+
+      Code that uses variables a lot end up with a lot of 'drop' usage
+      as the first word. I made a change recommended by Slava to have
+      the action add the drop automatically depending on the stack
+      effect of the action. So now this code works:
+\begin{verbatim}
+      expr = lhs:x '+' rhs:y => [[ x y + ]]
+\end{verbatim}
+
+      So now if you use variables in a rule, the stack effect of the
+      action should be \texttt{( -- ast )}. If you don't, it should be
+      \texttt{( ast -- ast )}.  
+
+\item I added a way for one EBNF parser to call rules defined in
+  another. This allows creating grammars which are hybrids of existing
+  parsers. Or just to reuse common things like string handling
+  expressions. These calls are called 'foreign' calls and appear on
+  the right hand side of a rule in angle brackets. Here is a parser
+  that parses strings between double quotation marks:
+\begin{verbatim}
+      EBNF: parse-string
+      StringBody = (!('"') .)* 
+      String= '"' StringBody:b '"' => [[ b >string ]]
+      ;EBNF
+\end{verbatim}
+      To call the 'String' rule from another parser:
+\begin{verbatim}
+      EBNF: parse-two-strings
+      TwoStrings = <foreign parse-string String> <foreign parse-string String>
+      ;EBNF
+\end{verbatim}
+
+      The \texttt{<foreign>} call in this example takes two arguments. The
+      first is the name of an existing EBNF: defined parser. The
+      second is the rule in that parser to invoke. It can also be used
+      like this:
+\begin{verbatim}
+      EBNF: parse-two-strings
+      TwoString = <foreign parse-string> <foreign parse-string>
+      ;EBNF
+\end{verbatim}
+
+      If the first argument is the name of an EBNF: defined parser and
+      no second argument is given, then the main rule of that parser
+      is used. The main rule is the last rule in the parser body. A
+      final way foreign can be used:
+\begin{verbatim}
+      : a-token ( -- parser ) "a" token ;
+
+      EBNF: parse-abc
+      abc = <foreign a-token> 'b' 'c'
+      ;EBNF
+\end{verbatim}
+
+      If the first argument given to foreign is not an EBNF: defined
+      parser, it is assumed that it has stack effect \texttt{( -- parser )} and
+      it will be called to return the parser to be used.
+
+\item It is now possible to override the tokenizer in an EBNF defined
+  parser. Usually the sequence to be parsed is an array of characters
+  or a string. Terminals in a rule match successive characters in the
+  array or string. For example:
+\begin{verbatim}
+      EBNF: foo
+      rule = "++" "--"
+      ;EBNF
+\end{verbatim}
+
+      This parser when run with the string "++--" or the array 
+      \texttt{\{ CHAR: + CHAR: + CHAR: - CHAR: - \}} will succeed with an AST of 
+      \texttt{\{ "++"  --" \}}. If you want to add whitespace handling to the grammar
+      you need to put it between the terminals:
+\begin{verbatim}
+      EBNF: foo
+      space = (" " | "\r" | "\t" | "\n")
+      spaces = space* => [[ drop ignore ]]
+      rule = spaces "++" spaces "--" spaces
+      ;EBNF
+\end{verbatim}
+
+      In a large grammar this gets tedious and makes the grammar hard
+      to read. Instead you can write a rule to split the input
+      sequence into tokens, and have the grammar operate on these
+      tokens. This is how the previous example might look:
+\begin{verbatim}
+      EBNF: foo
+      space = (" " | "\r" | "\t" | "\n")
+      spaces = space* => [[ drop ignore ]]
+      tokenizer = spaces ( "++" | "--" )
+      rule = "++" "--"
+      ;EBNF
+\end{verbatim}
+
+      'tokenizer' is the name of a built in rule. Once defined it is
+      called to retrieve the next complete token from the input
+      sequence. So the first part of 'rule' is to try and match
+      "++". It calls the tokenizer to get the next complete
+      token. This ignores spaces until it finds a "++" or "--". It is
+      as if the input sequence for the parser was actually 
+      \texttt{\{ "++" "--'' \}} instead of the string "++--". With the new tokenizer "...."
+      sequences in the grammar are matched for equality against the
+      token, rather than a string comparison against successive items
+      in the sequence. This can be used to match an AST from a
+      tokenizer:
+\begin{verbatim}
+      TUPLE: ast-number value ;
+      TUPLE: ast-string value ;
+
+      EBNF: foo-tokenizer
+      space = (" " | "\r" | "\t" | "\n")
+      spaces = space* => [[ drop ignore ]]
+
+      number = [0-9]* => [[ >string string>number ast-number boa ]]
+      string =  => [[ ast-string boa ]]
+      operator = ("+" | "-")
+
+      token = spaces ( number | string | operator )
+      tokens = tokenizer*
+      ;EBNF
+
+      ENBF: foo
+      tokenizer = <foreign foo-tokenizer token>
+
+      number = . ?[ ast-number? ]? => [[ value>> ]]
+      string = . ?[ ast-string? ]? => [[ value>> ]]
+      rule = string:a number:b "+" number:c => [[ a b c + 2array ]]
+      ;EBNF
+\end{verbatim}
+
+      In this example I split the tokenizer into a separate parser and
+ use 'foreign' to call it from the main one. This allows testing of
+ the tokenizer separately:
+\begin{verbatim}
+      "123 456 +" foo-tokenizer ast>> .
+      => { T{ ast-number f 123 } T{ ast-number f 456 } "+" }
+\end{verbatim}
+
+      The '.' EBNF production means match a single object in the
+      source sequence. Usually this is a character. With the
+      replacement tokenizer it is either a number object, a string
+      object or a string containing the operator. Using a tokenizer in
+      language grammars makes it easier to deal with
+      whitespace. Defining tokenizers in this way has the advantage of
+      the tokenizer and parser working in one pass. There is no
+      tokenization occurring over the whole string followed by the
+      parse of that result. It tokenizes as it needs too. You can even
+      switch tokenizers multiple times during a grammar. Rules use the
+      tokenizer that was defined lexically before the rule. This is
+      usefull in the JavaScript grammar:
+\begin{verbatim}
+      EBNF: javascript
+      tokenizer         = default 
+      nl                = "\r" "\n" | "\n"
+      tokenizer         = <foreign tokenize-javascript Tok>
+      ...
+
+      End                = !(.)
+      Name               = . ?[ ast-name?   ]?   => [[ value>> ]] 
+      Number             = . ?[ ast-number? ]?   => [[ value>> ]]
+      String             = . ?[ ast-string? ]?   => [[ value>> ]]
+      RegExp             = . ?[ ast-regexp? ]?   => [[ value>> ]]
+      SpacesNoNl         = (!(nl) Space)* => [[ ignore ]]
+      Sc                 = SpacesNoNl (nl | &("}") | End)| ";"
+      ...
+\end{verbatim}
+      Here the rule 'nl' is defined using the default tokenizer of
+      sequential characters ('default' has the special meaning of the
+      built in tokenizer). This is followed by using the JavaScript
+      tokenizer for the remaining rules. This tokenizer strips out
+      whitespace and newlines. Some rules in the grammar require
+      checking for a newline. In particular the automatic semicolon
+      insertion rule (managed by the 'Sc' rule here). If there is a
+      newline, the semicolon can be optional in places.
+\begin{verbatim}
+"do" Stmt:s "while" "(" Expr:c ")" Sc    => [[ s c ast-do-while boa ]]
+\end{verbatim}
+
+      Even though the JavaScript tokenizer has removed the newlines,
+      the 'nl' rule can be used to detect them since it is using the
+      default tokenizer. This allows grammars to mix and match the
+      tokenizer as required to make them more readable.
+\end{itemize}
+
+The JavaScript grammar is in the peg.javascript.parser vocabulary. The
+tokenizer is in peg.javascript.tokenizer. You can run it using the
+'parse-javascript' word in peg.javascript:
+\begin{verbatim}
+USE: peg.javascript
+"var a='hello'; alert(a);" parse-javascript ast>> pprint
+T{ ast-begin f
+  V{
+      T{ ast-var f "a" T{ ast-string f "hello" } }
+      T{ ast-call f
+        T{ ast-get f "alert" } V{ T{ ast-get f "a" } } }
+  }
+}
+\end{verbatim}
+
