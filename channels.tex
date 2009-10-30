@@ -5,7 +5,7 @@ language, and specifically how it's concurrency features
 work. NewSqueak uses channels and is based on the concepts of
 Communicating Sequential Processes.
 
-To play around with some of the ideas in the video I created a quick implementation of channels for Factor and converted a couple of the NewSqueak examples.
+Factor has a 'channels' vocabulary that lets you do similar things.
 
 \wordtable{
 \vocabulary{channels}
@@ -28,21 +28,19 @@ selected to receive the data when a sender becomes available.
 Here is the `counter' example ported from NewSqueak:
 
 \begin{verbatim}
-USING: channels concurrency ;
+USING: channels threads ;
 
 : (counter) ( channel n -- )
-  [ swap to ] 2keep 1+ (counter) ;
+  [ swap to ] [ 1 + (counter) ] 2bi ;
     
 : counter ( channel -- )
   2 (counter) ;    
 
 : counter-test ( -- n1 n2 n3 )
-  <channel> [ counter ] spawn drop 
-  [ from ] keep 
-  [ from ] keep 
-  from ;
+  <channel> dup [ counter ] curry "counter" spawn drop
+  [ from ] [ from ] [ from ] tri ; 
 
-counter-test 
+counter-test . . . 
  => 2
     3
     4
