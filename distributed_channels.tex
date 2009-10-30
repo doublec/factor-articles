@@ -16,7 +16,7 @@ identifier that can be used by remote nodes to use the channel. For
 example:
 
 \begin{verbatim}
-USING: threads channels channels.remote ;
+USING: fry threads channels channels.remote ;
 
 : (counter) ( channel n -- )
   [ swap to ] [ 1 + (counter) ] 2bi ;
@@ -24,7 +24,7 @@ USING: threads channels channels.remote ;
 : counter ( channel -- )
   2 (counter) ;    
 
-<channel> dup [ counter ] curry "counter" spawn drop publish .
+<channel> dup '[ _ counter ] "counter" spawn drop publish .
  => 12345678901234567890.....
 \end{verbatim}
 
