@@ -10,15 +10,13 @@ The Parsing Expression Grammar library has code to allow search and replace usin
 The `search' word takes a string and a parser off the stack. It returns a sequence of all substrings in the original string that were successfully parsed by the parser. The result returned in the sequence is the AST produced by the parser. For example:
 
 \begin{verbatim}
+USING: peg peg.ebnf peg.parsers peg.search ;
+
 : bold ( -- parser )
-  [
-    "*" token ,
-    [ CHAR: * = not ] satisfy repeat1 ,
-    "*" token ,
-  ] seq* [ second >string ] action ;
+  <EBNF rule="*" (!("*") .)+:s "*" => [[ s >string ]] EBNF> ;
 
 "hello *world* from *factor*" bold search . 
- => { "world" "factor" } 
+ => V{ "world" "factor" } 
 
 "one 100 two 300" 'integer' search .
  => { 100 300 }
@@ -36,7 +34,7 @@ The `replace' word takes a string and parser off the stack. It returns the origi
 
 \begin{verbatim}
 "Hello *World*" bold [ 
-  "<strong>" swap "</strong>" 3append 
+  "<strong>" "</strong>" surround
 ] action replace .
  => "Hello <strong>World</strong>"
 \end{verbatim}
