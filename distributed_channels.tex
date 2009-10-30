@@ -6,7 +6,7 @@ the network.
 
 \wordtable{
 \vocabulary{channels.remote}
-\ordinaryword{<remote-channel>}{<remote-channel> ( node id -- channel )}
+\ordinaryword{<remote-channel>}{<remote-channel> ( node id -- remote-channel )}
 \ordinaryword{publish}{publish ( channel -- id )}
 }
 
@@ -16,15 +16,15 @@ identifier that can be used by remote nodes to use the channel. For
 example:
 
 \begin{verbatim}
-USING: concurrency channels channels.remote ;
+USING: threads channels channels.remote ;
 
 : (counter) ( channel n -- )
-  [ swap to ] 2keep 1+ (counter) ;
+  [ swap to ] [ 1 + (counter) ] 2bi ;
     
 : counter ( channel -- )
   2 (counter) ;    
 
-<channel> [ counter ] spawn drop publish .
+<channel> dup [ counter ] curry "counter" spawn drop publish .
  => 12345678901234567890.....
 \end{verbatim}
 
@@ -35,13 +35,12 @@ hostname and port:
 
 \wordtable{
 \vocabulary{concurrency.distributed}
-\ordinaryword{<node>}{<node> ( hostname port -- node )}
-\ordinaryword{start-node}{start-node ( hostname port -- )}
+\ordinaryword{start-node}{start-node ( port -- )}
 }
 
 \begin{verbatim}
 USE: concurrency.distributed
-"foo.com" 9000 start-node
+9000 start-node
 \end{verbatim}
 
 Once this is done all published channels become available. Note that
@@ -57,42 +56,51 @@ on normal channels. The data is marshalled over the network using the
 serialization library.  
 
 \begin{verbatim}
-"foo.com" 9000 <node> 1234... <remote-channel> from .
+USING: io.sockets ;
+
+"127.0.0.1" 9000 <inet4> 1234... <remote-channel> from .
 \end{verbatim}
 
 One way of setting up remote channel services is to serialize an instance of a \texttt{<remote-channel>} for a published channel and make it available on an HTTP server. The remote nodes can retrieve this via HTTP, deserialize it and use it. You can test this on a local machine by running two factor instances. In instance 1:
 
 \begin{verbatim}
-USING: concurrency 
-       concurrency.distributed 
-       channels 
-       channels.remote 
-       serialize ;
+USING:
+  fry 
+  io.encodings.binary
+  threads 
+  concurrency.distributed 
+  channels  
+  channels.remote 
+  serialize 
+;
 
-"localhost" 9000 start-node 
+9000 start-node 
 
 : (counter) ( channel n -- )
-  [ swap to ] 2keep 1+ (counter) ;
+  [ swap to ] [ 1 + (counter) ] 2bi ;
     
 : counter ( channel -- )
   2 (counter) ;    
 
-<channel> [ counter ] spawn drop 
-publish localnode swap <remote-channel>
-"counter.ser" <file-writer> [ serialize ] with-stream
+<channel> dup '[ _ counter ] "counter" spawn drop 
+publish local-node get swap <remote-channel>
+"counter.ser" binary [ serialize ] with-file-writer
 \end{verbatim}
 
 This creates a channel that returns incrementing integer numbers, as per our previous examples. A \texttt{<remote-channel>} is created with the published identifier for this channel and our node address. This is serialized to a file called ``counter.ser''. A remote node can deserialize this file and use it to access the channel immediately. In factor instance 2:
 
 \begin{verbatim}
-USING: concurrency 
-       concurrency.distributed 
-       channels 
-       channels.remote 
-       serialize ;
+USING: 
+  io.encodings.binary
+  threads 
+  concurrency.distributed 
+  channels 
+  channels.remote 
+  serialize 
+;
 
-"localhost" 9001 start-node 
-"counter.ser" <file-reader> [ deserialize ] with-stream
+9001 start-node 
+"counter.ser" binary [ deserialize ] with-file-reader
 dup from .
  => 2
 dup from .
