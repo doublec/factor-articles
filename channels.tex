@@ -28,7 +28,7 @@ selected to receive the data when a sender becomes available.
 Here is the `counter' example ported from NewSqueak:
 
 \begin{verbatim}
-USING: channels threads ;
+USING: channels fry threads ;
 
 : (counter) ( channel n -- )
   [ swap to ] [ 1 + (counter) ] 2bi ;
@@ -37,7 +37,7 @@ USING: channels threads ;
   2 (counter) ;    
 
 : counter-test ( -- n1 n2 n3 )
-  <channel> dup [ counter ] curry "counter" spawn drop
+  <channel> dup '[ _ counter ] "counter" spawn drop
   [ from ] [ from ] [ from ] tri ; 
 
 counter-test . . . 
