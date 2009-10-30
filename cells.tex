@@ -19,14 +19,14 @@ on the top of the stack.
 }
 \begin{alltt}
 USE: models
-42 <model> model-value .
+42 <model> value>> .
   \textbf{42}
 \end{alltt}
 
-New models can be created based on the value of existing models. The \verb|<filter>| word creates a new model, with its value being the result of a quotation applied to the original models value. Its value changes whenever the original model is changed.
+New models can be created based on the value of existing models. The \verb|<arrow>| word creates a new model, with its value being the result of a quotation applied to the original models value. Its value changes whenever the original model is changed.
 \wordtable{
 \vocabulary{models}
-\ordinaryword{<filter>}{<filter>~( model quot -- filter )}
+\ordinaryword{<arrow>}{<arrow>~( model quot -- arrow )}
 }
 \begin{alltt}
 USE: models
@@ -35,12 +35,12 @@ SYMBOL: a
 SYMBOL: b
 
 42 <model> a set
-a get [ 2 * ] <filter> b set
+a get [ 2 * ] <arrow> b set
 b get activate-model
-b get model-value .
+b get value>> .
   \textbf{84}
 10 a get set-model
-b get model-value .
+b get value>> .
   \textbf{20}
 \end{alltt}
 You'll notice the call to the word \verb|activate-model|. An active model is one that gets updated when the models it depends on change. There is a corresponding \verb|deactivate-model| that can be called to stop changes from propagating.
@@ -59,7 +59,8 @@ You'll notice the call to the word \verb|activate-model|. An active model is one
 Gadgets can use models as their underlying data to be displayed. The gadget will automatically be updated when the underlying data changes. 
 
 \begin{verbatim}
-"hello"  <model> dup <label-control> gadget.
+"hello"  <model> 
+dup <label-control> gadget.
 "world" over set-model
 "!" over set-model
 \end{verbatim}
@@ -89,7 +90,7 @@ USE: alarms
 : update-time ( -- )
   now time get-global set-model ;
 
-[ update-time ] now 1 seconds add-alarm
+[ update-time ] now 1 seconds add-alarm drop
 \end{verbatim}
 
 The \verb|update-time| words gets the current date and time (using \verb|now|)
@@ -101,10 +102,10 @@ the `time' variable and see that it changes between calls:
 \begin{alltt}
 USE: calendar.format
 
-time get-global model-value timestamp>http-string .
+time get-global value>> timestamp>http-string .
   \textbf{"Sun, 20 Jan 2008, 02:02:02 GMT"} 
 
-time get-global model-value timestamp>http-string .
+time get-global value>> timestamp>http-string .
   \textbf{"Sun, 20 Jan 2008, 02:04:02 GMT" }
 \end{alltt}
 
@@ -114,8 +115,10 @@ can be created and displayed with:
 \begin{verbatim}
 USING: ui.gadgets.labels ui.gadgets.panes calendar.format ;
 
-time get-global [ timestamp>http-string ] <filter> <label-control> gadget.
+time get-global 
+[ timestamp>http-string ] <arrow> <label-control> 
+gadget.
 \end{verbatim}
 
-Notice I'm using \verb|<filter>| to take the time value and convert it into a string. A \verb|<label-control>| can only display strings, so it has the filtered value as its data. The gadget displayed on the listener will update automatically as the time changes every second.
+Notice I'm using \verb|<arrow>| to take the time value and convert it into a string. A \verb|<label-control>| can only display strings, so it has the filtered value as its data. The gadget displayed on the listener will update automatically as the time changes every second.
 
