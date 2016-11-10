@@ -64,7 +64,7 @@ It sounds complex but is actually very easy in practice. Here what an
 example `counter' process might look like using \verb|match-cond|:
 
 \begin{verbatim}
-USING: match concurrency.messaging ;
+USING: fry match concurrency.messaging ;
 
 SYMBOL: increment
 SYMBOL: decrement
@@ -86,7 +86,7 @@ the value and send it back to the calling process. So sends/receives
 look like:
 
 \begin{alltt}
-USING: threads ;
+USING: make threads ;
 
 [ 0 counter ] "counter" spawn
 \{ increment 5 \} over send
