@@ -25,11 +25,12 @@ USE: models
 
 New models can be created based on the value of existing models. The \verb|<arrow>| word creates a new model, with its value being the result of a quotation applied to the original models value. Its value changes whenever the original model is changed.
 \wordtable{
-\vocabulary{models}
+\vocabulary{models.arrow}
 \ordinaryword{<arrow>}{<arrow>~( model quot -- arrow )}
 }
 \begin{alltt}
 USE: models
+USE: models.arrow
 
 SYMBOL: a
 SYMBOL: b
@@ -59,6 +60,9 @@ You'll notice the call to the word \verb|activate-model|. An active model is one
 Gadgets can use models as their underlying data to be displayed. The gadget will automatically be updated when the underlying data changes. 
 
 \begin{verbatim}
+USE: ui.gadgets.labels
+USE: ui.gadgets.panes
+
 "hello"  <model> 
 dup <label-control> gadget.
 "world" over set-model
@@ -85,16 +89,16 @@ The model here wraps the current date and time produced by
 thread which sets the value every second:
 
 \begin{verbatim}
-USE: alarms
+USE: timers
 
 : update-time ( -- )
   now time get-global set-model ;
 
-[ update-time ] now 1 seconds add-alarm drop
+[ update-time ] 1 seconds every drop
 \end{verbatim}
 
 The \verb|update-time| words gets the current date and time (using \verb|now|)
-and sets the model's value to it. An alarm is added to do this every second.
+and sets the model's value to it. A timer is created to do this every second.
 
 We can confirm that this value is updating by getting the value of
 the `time' variable and see that it changes between calls:
