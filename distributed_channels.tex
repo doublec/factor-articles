@@ -30,17 +30,17 @@ USING: fry threads channels channels.remote ;
 
 Remote channels are implemented using
 distributed concurrency so you must start a node on the Factor
-instance you are using. This is done with `start-node' giving the
-hostname and port:
+instance you are using. This is done with `<node-server>' giving the
+hostname and port in an `addrspec`.
 
 \wordtable{
 \vocabulary{concurrency.distributed}
-\ordinaryword{start-node}{start-node ( port -- )}
+\ordinaryword{<node-server>}{<node-server> ( addrspec -- threaded-server )}
 }
 
 \begin{verbatim}
-USE: concurrency.distributed
-9000 start-node
+USING: io.sockets io.servers concurrency.distributed ;
+"localhost" 9000 <inet> <node-server> start-server
 \end{verbatim}
 
 Once this is done all published channels become available. Note that
@@ -56,7 +56,7 @@ on normal channels. The data is marshalled over the network using the
 serialization library.  
 
 \begin{verbatim}
-USING: io.sockets ;
+USING: io.sockets channels channels.remote ;
 
 "127.0.0.1" 9000 <inet4> 1234... <remote-channel> from .
 \end{verbatim}
