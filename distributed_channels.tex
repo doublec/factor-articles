@@ -30,17 +30,17 @@ USING: fry threads channels channels.remote ;
 
 Remote channels are implemented using
 distributed concurrency so you must start a node on the Factor
-instance you are using. This is done with `<node-server>' giving the
-hostname and port in an `addrspec`.
+instance you are using. This is done with 'start-node' giving the
+hostname and port in an 'addrspec'.
 
 \wordtable{
 \vocabulary{concurrency.distributed}
-\ordinaryword{<node-server>}{<node-server> ( addrspec -- threaded-server )}
+\ordinaryword{start-node}{start-node ( addrspec -- )}
 }
 
 \begin{verbatim}
 USING: io.sockets io.servers concurrency.distributed ;
-"localhost" 9000 <inet> <node-server> start-server
+"localhost" 9000 <inet> start-node
 \end{verbatim}
 
 Once this is done all published channels become available. Note that
@@ -55,11 +55,19 @@ You can use `from' and `to' on the remote channel exactly as you can
 on normal channels. The data is marshalled over the network using the
 serialization library.  
 
-\begin{verbatim}
-USING: io.sockets channels channels.remote ;
+Run the following on a different node to use the services of the first node,
+replacing '1234...' with the published id from the previous example.
 
-"127.0.0.1" 9000 <inet4> 1234... <remote-channel> from .
+\begin{verbatim}
+USING: io.sockets channels channels.remote concurrency.distributed ;
+
+"localhost" 9001 <inet> start-node
+
+"localhost" 9000 <inet> 1234... <remote-channel> from .
 \end{verbatim}
+
+Note that you must start a node using 'start-node' on all nodes that want to
+use remote channels.
 
 One way of setting up remote channel services is to serialize an instance of a \texttt{<remote-channel>} for a published channel and make it available on an HTTP server. The remote nodes can retrieve this via HTTP, deserialize it and use it. You can test this on a local machine by running two factor instances. In instance 1:
 
@@ -74,7 +82,7 @@ USING:
   serialize 
 ;
 
-9000 start-node 
+"localhost" 9000 <inet> start-node 
 
 : (counter) ( channel n -- )
   [ swap to ] [ 1 + (counter) ] 2bi ;
@@ -83,7 +91,7 @@ USING:
   2 (counter) ;    
 
 <channel> dup '[ _ counter ] "counter" spawn drop 
-publish local-node get swap <remote-channel>
+publish local-node get insecure>> swap <remote-channel>
 "counter.ser" binary [ serialize ] with-file-writer
 \end{verbatim}
 
@@ -99,7 +107,7 @@ USING:
   serialize 
 ;
 
-9001 start-node 
+"localhost" 9001 <inet> start-node 
 "counter.ser" binary [ deserialize ] with-file-reader
 dup from .
  => 2
