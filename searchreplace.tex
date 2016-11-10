@@ -18,11 +18,11 @@ USING: peg peg.ebnf peg.parsers peg.search ;
 "hello *world* from *factor*" bold search . 
  => V{ "world" "factor" } 
 
-"one 100 two 300" 'integer' search .
- => { 100 300 }
+"one 100 two 300" integer-parser search .
+ => V{ 100 300 }
 
-"one 100 two 300" 'integer' [ 2 * ] action search .
- => { 200 600 }
+"one 100 two 300" integer-parser [ 2 * ] action search .
+ => V{ 200 600 }
 \end{verbatim}
 
 \wordtable{
