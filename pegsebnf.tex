@@ -21,7 +21,9 @@ directly in code, have it compiled to a quotation at parse time, and
 then called at runtime. Usage looks like:
 
 \begin{verbatim}
-"1+2" [EBNF expr=[0-9] '+' [0-9] EBNF] call
+USE: peg.ebnf
+
+"1+2" [EBNF expr=[0-9] '+' [0-9] EBNF]
 \end{verbatim}
 
 The older peg code had an \texttt{<EBNF ... EBNF>} embedded language and each
@@ -29,18 +31,20 @@ rule in the language was translated to a Factor word. That's now
 changed to an EBNF: definition. An example:
 
 \begin{verbatim}
+USING: peg.ebnf math.parser rosetta-code.long-multiplication ;
+
 EBNF: expr 
 digit    = [0-9]            => [[ digit> ]]
-number   = (digit)+         => [[ 10 digits>integer ]]
+number   = (digit)+         => [[ digits->integer ]]
 value    =   number 
            | ("(" exp ")")  => [[ second ]]
 
-fac      =   fac:x "*" value:y  => [[ drop x y * ]]
-           | fac:x "/" value:y  => [[ drop x y / ]]
+fac      =   fac:x "*" value:y  => [[ x y * ]]
+           | fac:x "/" value:y  => [[ x y / ]]
            | number
 
-exp      =   exp:x "+" fac:y    => [[ drop x y + ]]
-           | exp:x "-" fac:y    => [[ drop x y - ]]
+exp      =   exp:x "+" fac:y    => [[ x y + ]]
+           | exp:x "-" fac:y    => [[ x y - ]]
            | fac
 ;EBNF
 \end{verbatim}
@@ -49,7 +53,7 @@ This creates a word, 'expr', that runs the last rule in the embedded
 language (the 'exp' rule in this case) on the string passed to it:
 
 \begin{verbatim}
-"1+2*3+4" expr parse-result-ast .
+"1+2*3+4" expr .
  => 11
 \end{verbatim}
 
@@ -70,7 +74,7 @@ If you've used peg.ebnf before you'll see some new features in this code:
   can be referenced in the action quotations. This is implemented
   using locals. This can be seen in EBNF code like this:
 \begin{verbatim}
-exp:x "+" exp:y => [[ drop x y + ]]
+exp:x "+" exp:y => [[ x y + ]]
 \end{verbatim}
 
       Usually that rule produces an AST consisting of a 3 element
@@ -84,7 +88,10 @@ exp:x "+" exp:y => [[ drop x y + ]]
 ] with-locals
 \end{verbatim}
 
-      This is efficient and makes the grammar easier to read.
+      This is efficient and makes the grammar easier to read. Note
+      that when using variable names in a rule that the action
+      quotation has stack effect \texttt{( -- ast )} instead of
+      the usual \texttt{( ast -- ast )}.
 
 \item Another major new feature is grammars now handle direct and
   indirect left recursion. I implemented this from the VPRI paper
@@ -113,10 +120,12 @@ odd= [0-9] ?[ digit> odd? ]?
 EBNF: foo
 number=([0-9])+
 expr  = number '+' number
-;EXPR
+;EBNF
 
-"1+2" foo parse-result-ast => { "1" "+" "2" }
-"1+2" "number" \ foo rule parse parse-result-ast => "1"
+USE: peg
+
+"1+2" foo => V{ V{ 49 } "+" V{ 50 } }
+"1+2" "number" \ foo rule parse => V{ 49 }
 \end{verbatim}
 
       Notice the 'rule' word returns the parser object rather than the
@@ -136,7 +145,7 @@ repository yet is the ability to use the embedded grammar DSL to
 operate over Factor arrays and tuples. This allows writing an embedded
 grammar to produced an AST, and another embedded grammar to transform
 that AST into something else. Here's what code to transform an AST
-currently looks like:
+currently looks like (note that this does not currently compile):
 
 \begin{verbatim}
 TUPLE: plus lhs rhs ;
