@@ -47,7 +47,8 @@ expr = lhs '+' rhs => [[ first3 nip + ]]
       To call the 'String' rule from another parser:
 \begin{verbatim}
       EBNF: parse-two-strings
-      TwoStrings = <foreign parse-string String> <foreign parse-string String>
+      TwoStrings = <foreign parse-string String>
+                   <foreign parse-string String>
       ;EBNF
 \end{verbatim}
 
@@ -118,28 +119,35 @@ expr = lhs '+' rhs => [[ first3 nip + ]]
       "++". It calls the tokenizer to get the next complete
       token. This ignores spaces until it finds a "++" or "--". It is
       as if the input sequence for the parser was actually 
-      \texttt{\{ "++" "--'' \}} instead of the string "++--". With the new tokenizer "...."
+      \texttt{\{ "++" "--" \}} instead of the string "++--". With the new tokenizer "...."
       sequences in the grammar are matched for equality against the
       token, rather than a string comparison against successive items
       in the sequence. This can be used to match an AST from a
       tokenizer:
 \begin{verbatim}
+      USING: peg peg.ebnf math.parser ;
+
       TUPLE: ast-number value ;
       TUPLE: ast-string value ;
+
+      EBNF: parse-string
+      StringBody = (!('"') .)* 
+      String= '"' StringBody:b '"' => [[ b >string ]]
+      ;EBNF
 
       EBNF: foo-tokenizer
       space = (" " | "\r" | "\t" | "\n")
       spaces = space* => [[ drop ignore ]]
 
-      number = [0-9]* => [[ >string string>number ast-number boa ]]
-      string =  => [[ ast-string boa ]]
+      number = [0-9]+ => [[ >string string>number ast-number boa ]]
+      string = <foreign parse-string String> => [[ ast-string boa ]]
       operator = ("+" | "-")
 
       token = spaces ( number | string | operator )
-      tokens = tokenizer*
+      tokens = token*
       ;EBNF
 
-      ENBF: foo
+      EBNF: foo
       tokenizer = <foreign foo-tokenizer token>
 
       number = . ?[ ast-number? ]? => [[ value>> ]]
@@ -152,7 +160,7 @@ expr = lhs '+' rhs => [[ first3 nip + ]]
  use 'foreign' to call it from the main one. This allows testing of
  the tokenizer separately:
 \begin{verbatim}
-      "123 456 +" foo-tokenizer ast>> .
+      "123 456 +" foo-tokenizer .
       => { T{ ast-number f 123 } T{ ast-number f 456 } "+" }
 \end{verbatim}
 
@@ -207,7 +215,7 @@ tokenizer is in peg.javascript.tokenizer. You can run it using the
 'parse-javascript' word in peg.javascript:
 \begin{verbatim}
 USE: peg.javascript
-"var a='hello'; alert(a);" parse-javascript ast>> pprint
+"var a='hello'; alert(a);" parse-javascript pprint
 T{ ast-begin f
   V{
       T{ ast-var f "a" T{ ast-string f "hello" } }
