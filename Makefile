@@ -21,20 +21,20 @@ ARTICLES = \
 all: factor-articles.pdf
 	
 factor-articles.pdf: $(ARTICLES)
-	echo X | pdflatex factor-articles
+	echo X | pdflatex factor-articles || makeindex factor-articles
 	makeindex factor-articles
 	pdflatex factor-articles
 	pdflatex factor-articles
 	pdflatex factor-articles
 
 clean:
-	rm *.aux
-	rm *.ind
-	rm *.ilg
-	rm *.out
-	rm *.pdf
-	rm *.glo
-	rm *.idx
-	rm *.*~
-	rm *.log
-	rm *.toc
+	-rm *.aux
+	-rm *.ind
+	-rm *.ilg
+	-rm *.out
+	-rm *.pdf
+	-rm *.glo
+	-rm *.idx
+	-rm *.*~
+	-rm *.log
+	-rm *.toc
