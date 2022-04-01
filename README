@@ -5,3 +5,13 @@ A collection of articles about the Factor programming language. See the followin
 Most of these articles are based on articles written on my weblog:
 
   http://www.bluishcoder.co.nz/tags/factor/
+
+Building
+========
+
+Running on a recent version of Ubuntu, the following commands will build the PDF:
+
+    $ sudo apt install texlive-latex-base \
+        texlive-latex-recommended \
+        texlive-fonts-recommended
+    $ make
